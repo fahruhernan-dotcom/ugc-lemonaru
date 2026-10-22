@@ -1,0 +1,30 @@
+[
+  { "text": "Cantik", "startMs": 400, "endMs": 850, "timestampMs": 400, "confidence": 0.99 },
+  { "text": " banget", "startMs": 860, "endMs": 1300, "timestampMs": 860, "confidence": 0.99 },
+  { "text": " peplum", "startMs": 1350, "endMs": 1800, "timestampMs": 1350, "confidence": 0.99 },
+  { "text": " top", "startMs": 1810, "endMs": 2150, "timestampMs": 1810, "confidence": 0.99 },
+  { "text": " korean", "startMs": 2160, "endMs": 2550, "timestampMs": 2160, "confidence": 0.99 },
+  { "text": " style", "startMs": 2560, "endMs": 2950, "timestampMs": 2560, "confidence": 0.99 },
+  { "text": " ini!", "startMs": 2960, "endMs": 3400, "timestampMs": 2960, "confidence": 0.99 },
+
+  { "text": "Potongannya", "startMs": 3800, "endMs": 4350, "timestampMs": 3800, "confidence": 0.99 },
+  { "text": " bikin", "startMs": 4360, "endMs": 4650, "timestampMs": 4360, "confidence": 0.99 },
+  { "text": " pinggang", "startMs": 4660, "endMs": 5100, "timestampMs": 4660, "confidence": 0.99 },
+  { "text": " keliatan", "startMs": 5110, "endMs": 5500, "timestampMs": 5110, "confidence": 0.99 },
+  { "text": " lebih", "startMs": 5510, "endMs": 5750, "timestampMs": 5510, "confidence": 0.99 },
+  { "text": " ramping.", "startMs": 5760, "endMs": 6300, "timestampMs": 5760, "confidence": 0.99 },
+
+  { "text": "Bahannya", "startMs": 6700, "endMs": 7100, "timestampMs": 6700, "confidence": 0.99 },
+  { "text": " adem,", "startMs": 7110, "endMs": 7450, "timestampMs": 7110, "confidence": 0.99 },
+  { "text": " jatuh,", "startMs": 7500, "endMs": 7850, "timestampMs": 7500, "confidence": 0.99 },
+  { "text": " dan", "startMs": 7860, "endMs": 8050, "timestampMs": 7860, "confidence": 0.99 },
+  { "text": " gak", "startMs": 8060, "endMs": 8250, "timestampMs": 8060, "confidence": 0.99 },
+  { "text": " gampang", "startMs": 8260, "endMs": 8600, "timestampMs": 8260, "confidence": 0.99 },
+  { "text": " kusut.", "startMs": 8610, "endMs": 9050, "timestampMs": 8610, "confidence": 0.99 },
+
+  { "text": "Buruan", "startMs": 9300, "endMs": 9650, "timestampMs": 9300, "confidence": 0.99 },
+  { "text": " checkout", "startMs": 9660, "endMs": 10050, "timestampMs": 9660, "confidence": 0.99 },
+  { "text": " di", "startMs": 10060, "endMs": 10250, "timestampMs": 10060, "confidence": 0.99 },
+  { "text": " keranjang", "startMs": 10260, "endMs": 10600, "timestampMs": 10260, "confidence": 0.99 },
+  { "text": " kuning!", "startMs": 10610, "endMs": 11100, "timestampMs": 10610, "confidence": 0.99 }
+]

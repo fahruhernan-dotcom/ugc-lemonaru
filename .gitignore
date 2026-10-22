@@ -1,0 +1,76 @@
+# Environment & Secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.token
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Flow Agent & Media Sessions (CRITICAL SENSITIVE DATA)
+**/cookies/
+**/session/
+**/sessions/
+cookies/
+sessions/
+*.cookie
+*.session
+data/chrome_profile_*/
+data/temp/
+
+# Generated Outputs & Packages
+output/
+outputs/
+ready_to_publish/
+temp/
+tmp/
+.temp/
+supabase/.temp/
+*.mp4
+*.wav
+*.mp3
+*.png
+*.jpg
+*.jpeg
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# SQLite & Local Data Stores (Exclude generated stores, keep sample catalog)
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/velora_store.json
+
+# AI Models & Large Weights (>100MB exceeds GitHub push limits)
+*.onnx
+*.bin
+*.pt
+*.pth
+data/models/
+
+# Tools & Agent Runtime Caches
+tools/**/cookies/
+tools/**/data/
+tools/**/output/
+
+# Archives
+*.tar.gz

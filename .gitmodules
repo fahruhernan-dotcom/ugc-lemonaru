@@ -1,0 +1,3 @@
+[submodule "tools/flow-agent"]
+	path = tools/flow-agent
+	url = https://github.com/kodelyx/flow-agent.git

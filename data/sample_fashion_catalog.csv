@@ -1,0 +1,9 @@
+product_id,name,category,price_idr,commission_rate,sales_count,rating,shop_name,stock_available,affiliate_url,image_urls
+PROD-ID-001,Kemeja Linen Oversized Pria Wanita Adem,fashion,139000,15%,1250,4.8,Zaskia Official Store,85,https://shop.tiktok.com/view/product/PROD-ID-001,"https://images.tiktok.com/prod001_1.jpg,https://images.tiktok.com/prod001_2.jpg,https://images.tiktok.com/prod001_3.jpg"
+PROD-ID-002,Tunik Katun Rayon Busui Friendly,fashion,95000,10%,320,4.6,Hijab Nusantara,5,https://shop.tiktok.com/view/product/PROD-ID-002,https://images.tiktok.com/prod002.jpg
+PROD-ID-003,Dress Floral Vintage Rayon Lembut,fashion,115000,3%,890,4.7,Bella Boutique,120,https://shop.tiktok.com/view/product/PROD-ID-003,https://images.tiktok.com/prod003.jpg
+PROD-ID-004,Blouse Korean Style Kerah Ruffle Cantik,fashion,79000,12%,450,,Modest Chic Jakarta,60,https://shop.tiktok.com/view/product/PROD-ID-004,https://images.tiktok.com/prod004.jpg
+PROD-ID-001,Kemeja Linen Oversized Pria Wanita Adem,fashion,139000,15%,1280,4.8,Zaskia Official Store,85,https://shop.tiktok.com/view/product/PROD-ID-001,"https://images.tiktok.com/prod001_1.jpg,https://images.tiktok.com/prod001_2.jpg"
+PROD-ID-005,Aksesoris Jepit Rambut Korea Satin,aksesoris,8000,15%,2400,4.5,Grosir Aksesoris ID,200,https://shop.tiktok.com/view/product/PROD-ID-005,https://images.tiktok.com/prod005.jpg
+PROD-ID-INVALID,,fashion,-50000,10%,10,4.0,,0,,
+PROD-ID-006,Blazer Formal Wanita Slim Fit Korean Look,fashion,185000,18%,850,4.9,UrbanChic ID,40,https://shop.tiktok.com/view/product/PROD-ID-006,"https://images.tiktok.com/prod006_1.jpg,https://images.tiktok.com/prod006_2.jpg,https://images.tiktok.com/prod006_3.jpg"
