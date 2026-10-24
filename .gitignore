@@ -1,6 +1,7 @@
 # Environment & Secrets
 .env
 .env.*
+!.env.example
 *.env
 *.pem
 *.key
@@ -31,7 +32,7 @@ sessions/
 data/chrome_profile_*/
 data/temp/
 
-# Generated Outputs & Packages
+# Generated Outputs & Packages (Strictly Excluded)
 output/
 outputs/
 ready_to_publish/
@@ -42,9 +43,6 @@ supabase/.temp/
 *.mp4
 *.wav
 *.mp3
-*.png
-*.jpg
-*.jpeg
 
 # Logs & OS
 *.log
