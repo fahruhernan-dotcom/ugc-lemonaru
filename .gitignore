@@ -23,13 +23,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Flow Agent & Media Sessions (CRITICAL SENSITIVE DATA)
-**/cookies/
+# Flow Agent & Media Sessions (Allowed cookies for headless VPS execution)
 **/session/
 **/sessions/
-cookies/
 sessions/
-*.cookie
 *.session
 data/chrome_profile_*/
 data/temp/
