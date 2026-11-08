@@ -255,12 +255,12 @@ class DoniHybridRenderer:
     def extract_speech_beat_segments(
         self,
         captions_path: Path,
-        min_seg_dur: float = 4.0,
-        max_seg_dur: float = 8.5
+        min_seg_dur: float = 2.5,
+        max_seg_dur: float = 7.5
     ) -> List[Dict[str, Any]]:
         """Parses word-level captions JSON into clean, natural sentence segments.
         Follows natural sentence boundaries (ending with . ! ?), NOT cut every few words.
-        Each sentence gets adequate screen time (4.0s - 8.5s) so the visual can breathe.
+        Enforces HUKUM BESI #19: Minimum footage stay duration is strictly >= 2.0s to avoid flickering.
         """
         if not captions_path.exists():
             return []
@@ -286,7 +286,7 @@ class DoniHybridRenderer:
             has_terminal_punct = any(text.endswith(p) for p in [".", "!", "?"])
             duration = e_sec - seg_start
 
-            # Only cut on real sentence termination with min duration, or forced max duration
+            # Only cut on real sentence termination with min duration (>= 2.5s), or forced max duration
             should_cut = False
             if has_terminal_punct and duration >= min_seg_dur:
                 should_cut = True
@@ -309,18 +309,18 @@ class DoniHybridRenderer:
         if not sentences:
             return []
 
-        # Merge tiny trailing sentences or fragments (< 3.0s) into previous sentence
+        # Merge tiny trailing sentences or fragments (< 2.0s) into previous sentence (Hukum Besi #19: Min 2.0s Stay)
         merged = []
         for s in sentences:
             dur = s["end"] - s["start"]
-            if merged and dur < 3.0:
+            if merged and dur < 2.0:
                 prev = merged.pop()
                 combined_text = prev["text"] + " " + s["text"]
                 merged.append({
                     "start": prev["start"],
                     "end": s["end"],
                     "text": combined_text,
-                    "words": set(re.findall(r"\b[a-zA-Z]{3,}\b", combined_text.lower()))
+                    "words": prev["words"].union(s["words"])
                 })
             else:
                 merged.append(s)
@@ -330,11 +330,13 @@ class DoniHybridRenderer:
         for i, s in enumerate(merged):
             st = 0.0 if i == 0 else aligned[i-1]["end"]
             en = merged[i+1]["start"] if i + 1 < len(merged) else (s["end"] + 0.35)
+            # Enforce HUKUM BESI #19: strictly >= 2.0s duration per clip
+            dur = max(2.0, round(en - st, 2))
             aligned.append({
                 "index": i + 1,
                 "start": round(st, 2),
-                "end": round(en, 2),
-                "duration": round(en - st, 2),
+                "end": round(st + dur, 2),
+                "duration": dur,
                 "text": s["text"],
                 "words": s["words"]
             })

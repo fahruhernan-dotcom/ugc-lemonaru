@@ -24,6 +24,11 @@
    - DILARANG KERAS meloloskan video yang memuat footage manusia, wajah Mas Fahru, domba, kambing, kandang ternak, coding, atau footage Tim Arya!
    - Jika terdeteksi klip manusia/non-kucing ➔ **REJECT MUTLAK (`QC_FAILED: SQUAD_CONTAMINATION`)**!
 
+6. **Anti-Flicker Retention Pacing (HUKUM BESI #19 MUTLAK):**
+   - Setiap klip video latar belakang WAJIB stay di layar minimal **2.0 detik** sebelum berganti.
+   - DILARANG flik klip cepat seenaknya (di bawah 2.0 detik).
+   - Jika ada potongan klip dengan durasi `< 2.0s` ➔ **REJECT MUTLAK (`QC_FAILED: FLICKER_VIOLATION`)**!
+
 ## 3. Format Stempel Audit Resmi (Forensic Stamping)
 Cleo wajib menyematkan stempel audit terverifikasi pada log:
 ```text

@@ -81,7 +81,16 @@
    - Seluruh rekaman pribadi Mas Fahru, peternakan Hero Farm, riset coding, dan kampus UNS HANYA BOLEH digunakan oleh Tim Arya (`reels-lemonaru`).
    - Milo dan Cleo wajib menolak keras dan mendrop video apa pun yang mencoba mencampurkan aset kedua tim!
 
-## 9. MANDAT OWNER: ACTIVE CREATIVE MASTERY (DILARANG STUCK & DILARANG PASIF)
+## 9. HUKUM BESI #19: ANTI-FLICKER RETENTION PACING (MINIMAL STAY 2 DETIK PER KLIP)
+1. **Dilarang Flik Footage Cepat / Seenaknya:**
+   - Setiap klip video latar belakang WAJIB stay minimal **2.0 detik** di layar sebelum berganti ke klip berikutnya.
+   - Haram hukumnya memotong klip di bawah 2.0 detik (misal 0.5s - 1.5s) yang membuat visual berkedip (*flicker*) dan mengacaukan fokus mata penonton.
+2. **Merging Fragmen Kecil:**
+   - Kalimat atau frasa pendek di bawah 2 detik wajib di-merge secara mulus dengan kalimat sebelumnya agar transisi visual mengalir tenang dan sinematik.
+3. **Hard Gate Cleo QC:**
+   - Cleo QC wajib memblokir (*FAILED*) bila mendeteksi ada klip dengan durasi tampil `< 2.0 detik`.
+
+## 10. MANDAT OWNER: ACTIVE CREATIVE MASTERY (DILARANG STUCK & DILARANG PASIF)
 - **Mindset Eksekutor Elit:** Punya 50 skill Remotion, Motion Design, dan 3D bukan cuma buat dipajang. Di setiap video, Milo WAJIB mengaktifkan seluruh kemampuan seninya secara agresif, bukan sekadar menempelkan klip secara monoton!
 - **Active Viral SFX Injection:** Milo wajib memadukan visual dengan efek suara dari reservoir (`sfx_catalog.json`): pasang `taco_bell_bong` atau `vine_boom` di detik pembuka hook/twist, dan `correct_ding` / `anime_wow` di momen edukasi atau kelakuan gemas anabul. Dilarang membiarkan video hambar tanpa sound design!
 - **Zero-Stuck Protocol:** Jika ada kendala klip, timing suara, atau aset visual, Milo DILARANG PASIF atau mogok di tengah jalan. Milo wajib mengambil keputusan kreatif independen (Ken Burns slow zoom, dynamic stretch, pergantian variasi klip otentik Mas Fahru, atau layout refactoring) sampai video selesai dengan skor Cleo QC >= 75.

@@ -223,6 +223,12 @@ def audit_footage_assembly(footage_clips: list, slice_dur: Union[float, List[flo
 
     for idx, c in enumerate(footage_clips):
         target_slice = dur_list[idx] if idx < len(dur_list) else dur_list[-1]
+        
+        # Enforce HUKUM BESI #19: Minimal stay 2.0s per clip to avoid flickering
+        if target_slice < 1.95:
+            report["passed"] = False
+            report["errors"].append(f"HUKUM BESI #19 VIOLATION: Segmen #{idx+1} berdurasi {target_slice:.2f}s (< 2.0 detik minimum stay duration)!")
+            
         probe = subprocess.run(
             ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(c)],
             capture_output=True, text=True
