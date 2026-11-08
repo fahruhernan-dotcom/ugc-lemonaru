@@ -511,7 +511,7 @@ class DoniRemotionFlowPipeline:
         logger.info(f"🎯 Target Topic: {t_key} -> '{topic['title']}'")
 
         # Fast-Path Optimization: Check if pre-rendered valid master video already exists
-        master_video_path = self.data_dir / f"{t_key}_master.mp4"
+        master_video_path = WORKSPACE / "data" / f"{t_key}_master.mp4"
         if master_video_path.exists() and master_video_path.stat().st_size > 5_000_000:
             logger.info("⚡ [FAST-PATH] Found pre-rendered master video (%.2f MB): %s", master_video_path.stat().st_size / (1024 * 1024), master_video_path)
             video_path = master_video_path
