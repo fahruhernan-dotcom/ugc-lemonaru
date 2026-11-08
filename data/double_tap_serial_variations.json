@@ -1,0 +1,74 @@
+[
+  {
+    "id": "tepuk_tangan_prestasi",
+    "trigger_category": "pride_and_celebration",
+    "slot_target": "midday_serial",
+    "context_fit": "Cocok untuk momen anabul berhasil latihan, pecah rekor waktu, atau berhasil menahan diri.",
+    "spoken_phrase": "Coba ketuk layar dua kali buat kasih tepuk tangan ke Spook yang udah sekeren ini!",
+    "prompt_banner_text": "KETUK 2X KASIH TEPUK TANGAN BUAT SPOOK! 👏🐾",
+    "suggested_sfx": "sfx_correct_ding.mp3",
+    "emotion_tag": "[excited]",
+    "placement": "late_story_resolution",
+    "estimated_duration_sec": 3.8
+  },
+  {
+    "id": "kirim_cinta_ibu_hebat",
+    "trigger_category": "maternal_and_empathy",
+    "slot_target": "midday_serial",
+    "context_fit": "Cocok untuk momen haru pengorbanan induk, merawat anak jalanan, atau perjuangan bertahan hidup.",
+    "spoken_phrase": "Coba pencet layar dua kali buat kirim peluk hangat ke ibu anabul yang rela berkorban ini...",
+    "prompt_banner_text": "TAP 2X KIRIM CINTA BUAT IBU HEBAT! ❤️🐾",
+    "suggested_sfx": "sfx_anime_wow.mp3",
+    "emotion_tag": "[sighs]",
+    "placement": "late_story_resolution",
+    "estimated_duration_sec": 4.1
+  },
+  {
+    "id": "respek_babu_sabar",
+    "trigger_category": "human_animal_bond",
+    "slot_target": "midday_serial",
+    "context_fit": "Cocok untuk mengapresiasi kesabaran luar biasa pemilik/babu yang melatih anabul dengan penuh kasih.",
+    "spoken_phrase": "Tahan dulu... coba tap layar dua kali sebagai tanda respek setinggi-tingginya ke pemilik yang sesabar ini!",
+    "prompt_banner_text": "TAP 2X TANDA RESPEK BUAT EMMA! 🫡❤️",
+    "suggested_sfx": "sfx_yellow_undertale_chime.mp3",
+    "emotion_tag": "[curious]",
+    "placement": "late_story_resolution",
+    "estimated_duration_sec": 4.2
+  },
+  {
+    "id": "lega_banget",
+    "trigger_category": "relief_and_catharsis",
+    "slot_target": "midday_serial",
+    "context_fit": "Cocok setelah ketegangan panjang, akhirnya makanan turun dan anabul makan dengan lahap dan damai.",
+    "spoken_phrase": "Aduh leganya... coba ketuk layar dua kali kalau kamu dari tadi ikut tahan napas liat perjuangannya!",
+    "prompt_banner_text": "KETUK 2X IKUT LEGA LIAT SPOOK MAKAN! 😻🍽️",
+    "suggested_sfx": "sfx_tindeck_toy_squeak.mp3",
+    "emotion_tag": "[laughs]",
+    "placement": "late_story_resolution",
+    "estimated_duration_sec": 4.0
+  },
+  {
+    "id": "dukung_kelulusan_next_ep",
+    "trigger_category": "series_cliffhanger_hype",
+    "slot_target": "midday_serial",
+    "context_fit": "Cocok untuk episode pertengahan (Part 2, Part 3) sebagai jembatan hype menuju episode kelulusan besok.",
+    "spoken_phrase": "Tinggal satu langkah lagi... coba pencet layar dua kali buat kasih doa agar Spook resmi lulus besok!",
+    "prompt_banner_text": "PENCET 2X DOAKAN SPOOK LULUS BESOK! 🎓🐾",
+    "suggested_sfx": "sfx_kaching_cash_register.mp3",
+    "emotion_tag": "[excited]",
+    "placement": "late_story_resolution",
+    "estimated_duration_sec": 3.9
+  },
+  {
+    "id": "salut_pantang_menyerah",
+    "trigger_category": "triumph_resilience",
+    "slot_target": "midday_serial",
+    "context_fit": "Cocok untuk anabul pantang menyerah yang berjuang keras menghadapi rintangan atau rasa lapar.",
+    "spoken_phrase": "Liat kegigihannya... coba tap layar dua kali buat semangatin anabul pintar yang gak gampang nyerah!",
+    "prompt_banner_text": "TAP 2X BUAT ANABUL PANTANG NYERAH! 🦁🐾",
+    "suggested_sfx": "sfx_correct_ding.mp3",
+    "emotion_tag": "[gasps]",
+    "placement": "late_story_resolution",
+    "estimated_duration_sec": 3.8
+  }
+]
