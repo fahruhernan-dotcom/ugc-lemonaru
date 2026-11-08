@@ -1,0 +1,56 @@
+[
+  {
+    "id": "rahasia_animasi",
+    "trigger_category": "curiosity_animation",
+    "spoken_phrase": "Bentar... coba kamu pencet layar dua kali sekarang... ada animasi anabul rahasia yang muncul loh!",
+    "prompt_banner_text": "PENCET LAYAR 2X LIAT ANIMASINYA! 🐾",
+    "suggested_sfx": "sfx_yellow_undertale_chime.mp3",
+    "emotion_tag": "[curious]",
+    "estimated_duration_sec": 3.8
+  },
+  {
+    "id": "babu_sejati",
+    "trigger_category": "identity_challenge",
+    "spoken_phrase": "Eits sebelum itu... coba pencet layar dua kali dan liat apa yang muncul! Kalau keluar animasi kucingnya... fix kamu babu anabul sejati!",
+    "prompt_banner_text": "KETUK 2X KALAU KAMU BABU SEJATI! 🐱",
+    "suggested_sfx": "sfx_correct_ding.mp3",
+    "emotion_tag": "[excited]",
+    "estimated_duration_sec": 4.2
+  },
+  {
+    "id": "anabul_kangen",
+    "trigger_category": "relatable_bonding",
+    "spoken_phrase": "Sebelum kaget sama faktanya... coba pencet layar dua kali! Kalau animasinya nyala... berarti anabulmu di rumah lagi kangen kamu tuh!",
+    "prompt_banner_text": "TAP 2X BUAT ANABUL KESAYANGAN! ❤️",
+    "suggested_sfx": "sfx_anime_wow.mp3",
+    "emotion_tag": "[curious]",
+    "estimated_duration_sec": 4.1
+  },
+  {
+    "id": "test_layar_hp",
+    "trigger_category": "engagement_test",
+    "spoken_phrase": "Coba kamu tap layar dua kali sekarang... di HP kamu keluar animasi kucing lucunya gak? Tulis di komentar ya!",
+    "prompt_banner_text": "TAP 2X, DI HP KAMU MUNCUL GAK? 🐾",
+    "suggested_sfx": "sfx_tindeck_toy_squeak.mp3",
+    "emotion_tag": "[excited]",
+    "estimated_duration_sec": 3.9
+  },
+  {
+    "id": "cek_level_sayang",
+    "trigger_category": "affection_meter",
+    "spoken_phrase": "Bentar... tahan dulu! Coba ketuk layar dua kali sekarang... kita cek seberapa sayang kamu sama anabulmu!",
+    "prompt_banner_text": "KETUK 2X CEK LEVEL SAYANG ANABUL! 😻",
+    "suggested_sfx": "sfx_kaching_cash_register.mp3",
+    "emotion_tag": "[gasps]",
+    "estimated_duration_sec": 3.7
+  },
+  {
+    "id": "paw_ajaib",
+    "trigger_category": "magical_paw",
+    "spoken_phrase": "Eits jangan di-skip dulu... coba pencet layar dua kali! Ada jejak cakar ajaib yang mau nyapa kamu tuh!",
+    "prompt_banner_text": "PENCET 2X DAPAT JEJAK CAKAR! 🐾",
+    "suggested_sfx": "sfx_yellow_undertale_chime.mp3",
+    "emotion_tag": "[curious]",
+    "estimated_duration_sec": 3.8
+  }
+]

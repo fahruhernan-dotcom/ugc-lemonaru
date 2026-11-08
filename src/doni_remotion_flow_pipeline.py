@@ -111,14 +111,62 @@ class DoniRemotionFlowPipeline:
             output_captions_json=str(captions_path)
         )
 
-        # Mix with soft playful BGM
-        logger.info("🎵 Mixing voiceover with acoustic cat BGM + auto-ducking...")
+        # Mix with soft playful BGM + Dynamic Sound Effects (SFX)
+        logger.info("🎵 Mixing voiceover with acoustic cat BGM + auto-ducking & dynamic SFX...")
+        
+        # Detect exact timing for SFX from captions
+        sfx_inputs = []
+        sfx_filters = []
+        next_input_idx = 2
+        
+        # 1. Opening Hook impact SFX (Taco Bell Bong at 0.1s)
+        taco_bell_path = ASSETS_DIR / "audio/sfx/sfx_taco_bell_bong.mp3"
+        if taco_bell_path.exists():
+            sfx_inputs.extend(["-i", str(taco_bell_path)])
+            sfx_filters.append(f"[{next_input_idx}:a]volume=0.35,adelay=100|100[sfx_hook];")
+            next_input_idx += 1
+
+        # 2. Interactive Double-Tap Pop SFX (Undertale chime / toy squeak right when "pencet" is spoken)
+        double_tap_delay_ms = 4000
+        try:
+            if captions_path.exists():
+                with open(captions_path, "r", encoding="utf-8") as f:
+                    words_data = json.load(f)
+                for w in words_data:
+                    clean_w = re.sub(r'[^\w]', '', w.get("text", "")).lower()
+                    if clean_w in ["pencet", "tap", "ketuk"]:
+                        double_tap_delay_ms = int(w.get("startMs", 4000))
+                        break
+        except Exception:
+            pass
+
+        chime_path = ASSETS_DIR / "audio/sfx/sfx_yellow_undertale_chime.mp3"
+        if chime_path.exists():
+            sfx_inputs.extend(["-i", str(chime_path)])
+            sfx_filters.append(f"[{next_input_idx}:a]volume=0.45,adelay={double_tap_delay_ms}|{double_tap_delay_ms}[sfx_tap];")
+            next_input_idx += 1
+
+        total_audio_inputs = next_input_idx
+        mix_sources = ["[voice]", "[bgm]"]
+        if taco_bell_path.exists():
+            mix_sources.append("[sfx_hook]")
+        if chime_path.exists():
+            mix_sources.append("[sfx_tap]")
+
+        filter_complex = (
+            "[0:a]volume=1.35,highpass=f=80,dynaudnorm[voice];"
+            "[1:a]volume=0.08[bgm];"
+            + "".join(sfx_filters)
+            + "".join(mix_sources)
+            + f"amix=inputs={len(mix_sources)}:duration=first:dropout_transition=2[aout]"
+        )
+
         cmd_audio = [
             "ffmpeg", "-y",
             "-i", str(raw_voice),
             "-stream_loop", "-1", "-i", str(BGM_PATH),
-            "-filter_complex",
-            "[0:a]volume=1.25,highpass=f=80,dynaudnorm[voice];[1:a]volume=0.08[bgm];[voice][bgm]amix=inputs=2:duration=first[aout]",
+            *sfx_inputs,
+            "-filter_complex", filter_complex,
             "-map", "[aout]",
             "-c:a", "libmp3lame", "-q:a", "2",
             str(master_audio_path)
