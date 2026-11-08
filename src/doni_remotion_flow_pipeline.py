@@ -507,16 +507,23 @@ class DoniRemotionFlowPipeline:
 
         # 1. Fetch Topic
         topic = self.fetch_next_topic(topic_key)
-        logger.info(f"🎯 Target Topic: {topic['topic_key']} -> '{topic['title']}'")
+        t_key = topic["topic_key"]
+        logger.info(f"🎯 Target Topic: {t_key} -> '{topic['title']}'")
 
-        # 2. Audio & Captions
-        audio_info = self.synthesize_audio_and_captions(topic)
+        # Fast-Path Optimization: Check if pre-rendered valid master video already exists
+        master_video_path = self.data_dir / f"{t_key}_master.mp4"
+        if master_video_path.exists() and master_video_path.stat().st_size > 5_000_000:
+            logger.info("⚡ [FAST-PATH] Found pre-rendered master video (%.2f MB): %s", master_video_path.stat().st_size / (1024 * 1024), master_video_path)
+            video_path = master_video_path
+        else:
+            # 2. Audio & Captions
+            audio_info = self.synthesize_audio_and_captions(topic)
 
-        # 3. Video Background (Handled directly by Hybrid Renderer)
-        bg_video = ""
+            # 3. Video Background (Handled directly by Hybrid Renderer)
+            bg_video = ""
 
-        # 4. Render Remotion Short (Hybrid Mode)
-        video_path = self.render_remotion_short(topic, audio_info, bg_video)
+            # 4. Render Remotion Short (Hybrid Mode)
+            video_path = self.render_remotion_short(topic, audio_info, bg_video)
 
         # 5. Publish
         if publish:
