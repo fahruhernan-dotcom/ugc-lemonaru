@@ -9,6 +9,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { TheBoldFont } from "../load-font";
+import { YOUTUBE_SHORTS_SAFE_AREA } from "../constants/safeArea";
 
 const fontFamily = TheBoldFont;
 
@@ -16,32 +17,38 @@ const container: React.CSSProperties = {
   justifyContent: "center",
   alignItems: "center",
   top: undefined,
-  bottom: 350,
-  height: 150,
+  bottom: YOUTUBE_SHORTS_SAFE_AREA.subtitleSafeBottom,
+  height: 180,
+  paddingLeft: YOUTUBE_SHORTS_SAFE_AREA.dangerLeft,
+  paddingRight: YOUTUBE_SHORTS_SAFE_AREA.dangerRight,
 };
 
-const DESIRED_FONT_SIZE = 120;
-const HIGHLIGHT_COLOR = "#39E508";
+const DESIRED_FONT_SIZE = 110;
+const HIGHLIGHT_COLOR = "#FFE600";
 
 export const Page: React.FC<{
   readonly enterProgress: number;
   readonly page: TikTokPage;
-}> = ({ enterProgress, page }) => {
+  readonly bottom?: number;
+}> = ({ enterProgress, page, bottom = YOUTUBE_SHORTS_SAFE_AREA.subtitleSafeBottom }) => {
   const frame = useCurrentFrame();
   const { width, fps } = useVideoConfig();
   const timeInMs = (frame / fps) * 1000;
 
+  // Enforce YouTube Shorts horizontal safe limit (max 760px) to prevent right-action button collision
+  const maxSafeWidth = Math.min(width * 0.74, YOUTUBE_SHORTS_SAFE_AREA.subtitleMaxWidth);
+
   const fittedText = fitText({
     fontFamily,
-    text: page.text,
-    withinWidth: width * 0.9,
+    text: page.text.replace(/,/g, ""),
+    withinWidth: maxSafeWidth,
     textTransform: "uppercase",
   });
 
   const fontSize = Math.min(DESIRED_FONT_SIZE, fittedText.fontSize);
 
   return (
-    <AbsoluteFill style={container}>
+    <AbsoluteFill style={{ ...container, bottom }}>
       <div
         style={{
           fontSize,
@@ -81,7 +88,7 @@ export const Page: React.FC<{
                   color: active ? HIGHLIGHT_COLOR : "white",
                 }}
               >
-                {t.text}
+                {t.text.replace(/,/g, "")}
               </span>
             );
           })}

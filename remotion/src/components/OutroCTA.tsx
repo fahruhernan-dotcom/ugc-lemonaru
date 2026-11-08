@@ -5,12 +5,14 @@ import { TheBoldFont } from "../load-font";
 interface OutroCTAProps {
   readonly headline?: string;
   readonly subheadline?: string;
+  readonly buttonText?: string;
   readonly startFromEndFrames?: number; // e.g. 100 frames from the end
 }
 
 export const OutroCTA: React.FC<OutroCTAProps> = ({
   headline = "CHECKOUT SEKARANG!",
   subheadline = "⚡ Diskon Terbatas Hari Ini Saja",
+  buttonText = "KLIK KERANJANG KUNING",
   startFromEndFrames = 100,
 }) => {
   const frame = useCurrentFrame();
@@ -77,7 +79,7 @@ export const OutroCTA: React.FC<OutroCTAProps> = ({
           style={{ fontFamily: TheBoldFont }}
           className="w-full bg-gradient-to-r from-amber-400 to-yellow-500 text-black py-4 px-6 rounded-2xl text-2xl font-black tracking-wide shadow-xl flex items-center justify-center gap-3 border-2 border-black"
         >
-          <span>KLIK KERANJANG KUNING</span>
+          <span>{buttonText}</span>
           <span className="text-3xl">👇</span>
         </div>
       </div>

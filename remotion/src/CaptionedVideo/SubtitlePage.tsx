@@ -7,8 +7,12 @@ import {
   useVideoConfig,
 } from "remotion";
 import { Page } from "./Page";
+import { YOUTUBE_SHORTS_SAFE_AREA } from "../constants/safeArea";
 
-const SubtitlePage: React.FC<{ readonly page: TikTokPage }> = ({ page }) => {
+const SubtitlePage: React.FC<{ readonly page: TikTokPage; readonly bottom?: number }> = ({
+  page,
+  bottom = YOUTUBE_SHORTS_SAFE_AREA.subtitleSafeBottom,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -23,7 +27,7 @@ const SubtitlePage: React.FC<{ readonly page: TikTokPage }> = ({ page }) => {
 
   return (
     <AbsoluteFill>
-      <Page enterProgress={enter} page={page} />
+      <Page enterProgress={enter} page={page} bottom={bottom} />
     </AbsoluteFill>
   );
 };

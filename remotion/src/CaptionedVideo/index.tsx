@@ -1,5 +1,4 @@
 import { Caption, createTikTokStyleCaptions } from "@remotion/captions";
-import { getVideoMetadata } from "@remotion/media-utils";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AbsoluteFill,
@@ -29,12 +28,9 @@ export const captionedVideoSchema = z.object({
 export const calculateCaptionedVideoMetadata: CalculateMetadataFunction<
   z.infer<typeof captionedVideoSchema>
 > = async ({ props }) => {
-  const fps = 30;
-  const metadata = await getVideoMetadata(props.src);
-
   return {
-    fps,
-    durationInFrames: Math.floor(metadata.durationInSeconds * fps),
+    fps: 30,
+    durationInFrames: 300,
   };
 };
 

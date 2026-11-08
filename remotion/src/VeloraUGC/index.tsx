@@ -7,7 +7,6 @@ import {
   staticFile,
   useDelayRender,
 } from "remotion";
-import { getVideoMetadata } from "@remotion/media-utils";
 import { z } from "zod";
 import { loadFont } from "../load-font";
 import { HookTitle } from "../components/HookTitle";
@@ -41,26 +40,10 @@ export type VeloraUGCProps = z.infer<typeof veloraUGCSchema>;
 export const calculateVeloraUGCMetadata: CalculateMetadataFunction<
   VeloraUGCProps
 > = async ({ props }) => {
-  const fps = 30;
-  try {
-    const src =
-      props.videoSrc.startsWith("http") || props.videoSrc.startsWith("/")
-        ? props.videoSrc
-        : staticFile(props.videoSrc);
-    const metadata = await getVideoMetadata(src);
-    return {
-      fps,
-      durationInFrames: Math.max(
-        90,
-        Math.floor(metadata.durationInSeconds * fps)
-      ),
-    };
-  } catch {
-    return {
-      fps,
-      durationInFrames: 300, // 10s default fallback
-    };
-  }
+  return {
+    fps: 30,
+    durationInFrames: 300,
+  };
 };
 
 export const VeloraUGC: React.FC<VeloraUGCProps> = ({

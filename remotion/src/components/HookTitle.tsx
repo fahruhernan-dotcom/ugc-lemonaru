@@ -1,17 +1,20 @@
 import React from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { TheBoldFont } from "../load-font";
+import { YOUTUBE_SHORTS_SAFE_AREA } from "../constants/safeArea";
 
 interface HookTitleProps {
   readonly title: string;
   readonly subtitle?: string;
   readonly badgeText?: string;
+  readonly top?: number;
 }
 
 export const HookTitle: React.FC<HookTitleProps> = ({
   title,
   subtitle,
   badgeText = "🔥 RACUN TIKTOK OOTD",
+  top = YOUTUBE_SHORTS_SAFE_AREA.hookTitleTop,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -43,10 +46,11 @@ export const HookTitle: React.FC<HookTitleProps> = ({
   return (
     <div
       style={{
+        top,
         transform: `translateY(${translateY}px) scale(${scale}) rotate(${wobble - 1}deg)`,
         opacity,
       }}
-      className="absolute top-28 left-6 right-6 flex flex-col items-center z-50 pointer-events-none"
+      className="absolute left-12 right-12 flex flex-col items-center z-50 pointer-events-none"
     >
       {/* Top Pill Tag */}
       {badgeText && (
@@ -58,8 +62,8 @@ export const HookTitle: React.FC<HookTitleProps> = ({
         </div>
       )}
 
-      {/* Main Punchy Hook Banner */}
-      <div className="bg-black/85 backdrop-blur-md border-4 border-amber-300 rounded-3xl p-6 shadow-2xl max-w-2xl text-center">
+      {/* Main Punchy Hook Banner (Restricted width to guarantee YouTube Shorts safe bounds) */}
+      <div className="bg-black/85 backdrop-blur-md border-4 border-amber-300 rounded-3xl p-6 shadow-2xl max-w-xl text-center">
         <h1
           style={{
             fontFamily: TheBoldFont,

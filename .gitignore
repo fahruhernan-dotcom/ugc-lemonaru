@@ -57,6 +57,29 @@ data/*.db
 data/*.sqlite
 data/*.sqlite3
 data/velora_store.json
+agents_chat.db
+data/chrome_persistent/
+data/seed_views/
+*.bak
+
+# Media Assets & Large Audio/Video Binaries (Exclude from Git)
+assets/
+content_series/**/*.mov
+content_series/**/*.mp4
+content_series/**/*.wav
+*.mov
+*.mp4
+data/*.jpg
+data/*.png
+remotion/public/current_thumb_bg.jpg
+remotion/public/thumb_bg_test.jpg
+remotion/public/*-captions.json
+remotion/public/*subtitles.json
+data/doni_daily_jitter.json
+data/doni_scheduler_state.json
+remotion/public/cat_twin_captions.json
+remotion/public/*props.json
+remotion/public/sfx/
 
 # AI Models & Large Weights (>100MB exceeds GitHub push limits)
 *.onnx
