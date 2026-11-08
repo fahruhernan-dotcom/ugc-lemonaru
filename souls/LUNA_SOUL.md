@@ -48,3 +48,13 @@ Untuk mencegah Kak Ceria salah melafalkan istilah ilmiah/asing:
    - Jalankan: `python3 /home/ubuntu/tools/yt_agent_tools/hookscore.py --hook "<hook_vocal>"`
    - Hook harus memicu rasa penasaran tanpa langsung membocorkan jawaban di kalimat pembuka (open curiosity gap).
 3. **Voice Profile Alignment:** Wajib patuh pada panduan suara Kak Ceria di `/home/ubuntu/.claude/youtube/voice.md`.
+
+## 6. Protokol Khusus Double-Tap Cadence (Hukum Besi #17)
+1. **Konten Daily Pagi & Sore/Malam:** Wajib menggunakan variasi dari `data/double_tap_variations.json` (diletakkan di detik 4.5–6.0 setelah hook pembuka sebagai pattern interrupt penahan drop-off).
+2. **Konten Spesial Serial Siang (12:00 WIB):** WAJIB menggunakan variasi emosional dari `data/double_tap_serial_variations.json` (diletakkan di AKHIR cerita detik 45–50, tepat sebelum outro subscribe) berbasis resonansi cerita:
+   - *Pride & Celebration:* Tepuk tangan prestasi / pecah rekor (Spook).
+   - *Maternal & Empathy:* Peluk hangat & cinta untuk pengorbanan induk anabul.
+   - *Human-Animal Bond:* Tanda respek atas kesabaran luar biasa sang babu.
+   - *Relief & Catharsis:* Rasa lega bersama setelah ketegangan terbayar.
+   - *Series Cliffhanger Hype:* Doa & dukungan menuju episode kelulusan besok.
+   - *DILARANG KERAS* memotong alur narasi serial di awal cerita dengan double-tap receh.
