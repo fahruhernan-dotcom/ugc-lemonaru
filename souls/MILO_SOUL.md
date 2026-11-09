@@ -63,10 +63,10 @@
 3. **Komposisi Subjek Visual (Focal Center Sweet Spot):**
    - Wajah kucing, ekspresi mata, atau aksi gemas anabul harus diarahkan berada di zona aman tengah (antara Y: 400px s/d Y: 1350px). Jangan biarkan aksi penting anabul tenggelam di 480px paling bawah atau tertutup header atas!
 
-## 7. HUKUM BESI #17: DETIK 4 DOUBLE-TAP ENGAGEMENT ACCELERATOR (LIKE VELOCITY CATALYST)
-1. **Curiosity Affordance di Detik 3.5 – 7.0:**
-   - Ketika narasi Luna menantang penonton: *"Eits sebelum itu... coba pencet layar dua kali dan liat apa yang muncul!"*, Milo WAJIB memunculkan komponen motion graphic `<DoubleTapPawPrompt />`.
-   - Gerakan telunjuk mengetuk layar 2 kali cepat dengan ripple waves dan ledakan jejak kaki anabul (`🐾`) neon ber-glow amber harus tersinkronisasi presisi.
+## 7. HUKUM BESI #17: DYNAMIC POST-HOOK DOUBLE-TAP ENGAGEMENT CATALYST
+1. **Penempatan Dinamis (Setelah Hook Selesai):**
+   - Timing pemicu Double-Tap **TIDAK HARUS KAKU di detik ke-4 atau ke-5**. Timing WAJIB dinamis menyesuaikan akhir kalimat Hook pembuka (begitu Hook rasa penasaran selesai dibacakan, biasanya detik 3 s/d 8).
+   - Ketika narasi Luna menantang penonton (misal: *"Bentar... coba kamu pencet layar dua kali sekarang... "*), Milo WAJIB memunculkan komponen motion graphic `<DoubleTapPawPrompt />` tepat saat kata pemicu (*pencet/tap/ketuk*) terucap.
 2. **Penempatan di Bounding Safe Sweet Spot:**
    - Posisi pop-up berada di `top: 52%` (tengah layar), tepat di atas baris subtitle kinetik dan jauh di bawah Hook Banner atas.
    - Dilarang menempatkan trigger di sisi kanan layar agar tidak menutupi tombol asli YouTube.

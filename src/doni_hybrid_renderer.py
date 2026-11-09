@@ -729,6 +729,23 @@ Kembalikan HANYA JSON array murni tanpa markdown/backticks:
         show_safe_area_guide: bool = False,
     ) -> Path:
         """Renders the transparent ProRes 4444 overlay via Remotion CLI, strictly respecting YouTube Shorts Safe Area."""
+        # Detect dynamic Double-Tap trigger timing from word timestamps if spoken in script
+        double_tap_start_frame = 95
+        show_double_tap = True
+        try:
+            captions_file_path = self.public_dir / captions_filename
+            if captions_file_path.exists():
+                with open(captions_file_path, "r", encoding="utf-8") as f:
+                    words_data = json.load(f)
+                for w in words_data:
+                    clean_w = re.sub(r'[^\w]', '', w.get("text", "")).lower()
+                    if clean_w in ["pencet", "tap", "ketuk"]:
+                        double_tap_start_frame = int((w.get("startMs", 3000) / 1000.0) * 30)
+                        logger.info("🎯 Dynamic Double-Tap timing aligned with speech at frame %d (%.2fs)", double_tap_start_frame, double_tap_start_frame / 30.0)
+                        break
+        except Exception as e:
+            logger.warning(f"Failed to calculate dynamic double tap frame: {e}")
+
         props = {
             "hookTitle": hook_title,
             "hookSubtitle": hook_subtitle,
@@ -739,6 +756,8 @@ Kembalikan HANYA JSON array murni tanpa markdown/backticks:
             "layoutMode": layout_mode,
             "subtitleBottom": subtitle_bottom,
             "showSafeAreaGuide": show_safe_area_guide,
+            "showDoubleTapPrompt": show_double_tap,
+            "doubleTapStartFrame": double_tap_start_frame,
         }
         props_file = self.public_dir / "active_overlay_props.json"
         props_file.write_text(json.dumps(props, ensure_ascii=False, indent=2), encoding="utf-8")
