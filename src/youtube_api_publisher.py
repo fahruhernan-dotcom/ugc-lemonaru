@@ -120,9 +120,25 @@ class YouTubeAPIPublisher:
 
         response = None
         while response is None:
-            status, response = request.next_chunk()
-            if status:
-                logger.info(f"Uploaded {int(status.progress() * 100)}%...")
+            try:
+                status, response = request.next_chunk()
+                if status:
+                    logger.info(f"Uploaded {int(status.progress() * 100)}%...")
+            except Exception as e:
+                if "invalid_grant" in str(e) or "expired or revoked" in str(e):
+                    logger.warning(f"OAuth token expired during upload ({e}). Triggering Auto-Healer...")
+                    import subprocess
+                    subprocess.run([sys.executable, "/home/ubuntu/tools/doni_oauth_auto_healer.py"], check=True)
+                    self.__init__(self.oauth_path)
+                    # Rebuild service and request
+                    request = self.youtube.videos().insert(
+                        part="snippet,status",
+                        body=body,
+                        media_body=media,
+                    )
+                    status, response = request.next_chunk()
+                else:
+                    raise e
 
         video_id = response.get("id")
         short_url = f"https://www.youtube.com/shorts/{video_id}"
