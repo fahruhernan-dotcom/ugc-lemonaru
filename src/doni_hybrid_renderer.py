@@ -66,8 +66,8 @@ class DoniHybridRenderer:
                 except Exception as e:
                     logger.warning(f"Failed to load catalog fallback: {e}")
 
-        # STRICT ISOLATION ASSERTION: Filter out any Arya/Reels paths & banned human/livestock keywords
-        banned_terms = ["reels-lemonaru", "assets/footage", "langkah_kaki", "domba", "kambing", "ternak", "selfie", "cermin"]
+        # STRICT ISOLATION ASSERTION: Filter out any Arya/Reels paths & non-cat project keywords
+        banned_terms = ["reels-lemonaru", "assets/footage", "tim_arya", "arya", "sarasehan", "domba", "kambing", "ternak", "selfie", "cermin", "podcast"]
         sanitized = []
         for item in catalog:
             p_str = item.get("abs_path", "").lower()

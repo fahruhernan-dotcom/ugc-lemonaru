@@ -301,18 +301,31 @@ def audit_against_database(
     report["metrics"]["db_series_id"] = series_id
     report["metrics"]["db_content_pillar"] = pillar
 
-    # 2. Banned Keyword Check in Footage (Anti-Human / Anti-Livestock)
-    banned_keywords = [
-        "kaki_pemilik", "langkah_kaki", "kaki_orang", "human_feet", "feet", "sandal", "sepatu", "perban",
-        "diangkat_tangan", "diangkat_sarung_tangan", "tangan_manusia", "orang", "pemilik", "human",
-        "selfie", "cermin", "domba", "kambing", "ternak", "blurams"
+    # 2. Strict Designated Folder & Squad Boundary Isolation
+    # Hanya boleh mengambil dari folder khusus footage kucing DoniesDaily
+    valid_folder_roots = [
+        "/home/ubuntu/apps/ugc-lemonaru/assets/cat_videos",
+        "/home/ubuntu/apps/ugc-lemonaru/flow_renders",
+        "/home/ubuntu/apps/ugc-lemonaru/content_series"
+    ]
+    banned_cross_squad_terms = [
+        "reels-lemonaru", "tim_arya", "arya", "sarasehan", "podcast", "domba", "kambing", "ternak", "coding", "tutorial"
     ]
     for c in footage_clips:
-        c_str = Path(c).name.lower()
-        for b in banned_keywords:
-            if b in c_str:
+        c_abs = str(Path(c).resolve()).lower()
+        # Assert within designated cat folders
+        if not any(c_abs.startswith(vfr.lower()) for vfr in valid_folder_roots):
+            report["passed"] = False
+            report["errors"].append(
+                f"SQUAD BOUNDARY VIOLATION: Klip '{Path(c).name}' berada di luar folder resmi DoniesDaily ({c_abs})!"
+            )
+        # Assert no Tim Arya or livestock leakage
+        for b in banned_cross_squad_terms:
+            if b in c_abs:
                 report["passed"] = False
-                report["errors"].append(f"HUKUM BESI #18 REJECTION: Klip '{Path(c).name}' terindikasi memuat '{b}'!")
+                report["errors"].append(
+                    f"TIM ARYA / NON-CAT CONTAMINATION: Klip '{Path(c).name}' terindikasi berasal dari project '{b}'!"
+                )
 
     # 3. Series Exact Footage Matching
     if series_id:

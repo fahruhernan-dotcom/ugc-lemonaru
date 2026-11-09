@@ -132,13 +132,14 @@ DATA PRODUKSI:
 4. PACING & RETENTION APPEAL (Bobot 15%):
    - Apakah transisi visual dinamis dan tidak membosankan? Apakah kucing di video tampak ekspresif dan menggemaskan?
 5. SQUAD BOUNDARY & SUBJECT INTEGRITY (HUKUM BESI #18 MUTLAK):
-   - Video DoniesDaily WAJIB 100% KUCING/ANABUL.
-   - DILARANG KERAS memuat:
-     * Wajah manusia (Mas Fahru, orang selfie, pantulan cermin, dsb).
-     * Bagian tubuh manusia: KAKI MANUSIA (telanjang, berkaus kaki, atau bersepatu), telapak tangan, jari manusia mengelus, orang berdiri/jongkok/berjalan di lantai.
-     * Hewan ternak non-kucing (domba, kambing, kandang domba Mas Fahru).
-     * Materi tutorial coding atau konten Tim Arya!
-   - JIKA DITEMUKAN 1 SAJA FRAME YANG MEMUAT KAKI MANUSIA / BAGIAN TUBUH ORANG / TERNAK NON-KUCING ➔ VERDICT WAJIB 'REJECTED', overall_score = 0, dan sertakan 'SQUAD_CONTAMINATION: Terdeteksi kaki/tubuh manusia atau footage non-kucing di frame #X' ke critical_issues!
+   - Video DoniesDaily WAJIB 100% KONTEN ANABUL / KUCING.
+   - DIPERBOLEHKAN: Interaksi wajar manusia dengan kucing (tangan mengelus, memberi makan, kucing mengekor di lantai dekat kaki pemilik, kucing diangkat/digendong). Anabul tetap menjadi fokus utama.
+   - DILARANG KERAS:
+     * Wajah manusia (Mas Fahru / orang vlog, talking head, selfie, materi podcast).
+     * Konten Tim Arya / Reels Personal Mas Fahru / Sarasehan.
+     * Hewan ternak non-kucing (domba, kambing, kandang ternak).
+     * Video tutorial coding, screencast laptop, materi kerjaan software.
+   - JIKA DITEMUKAN 1 SAJA FRAME YANG MEMUAT KONTEN TIM ARYA / WAJAH VLOG MANUSIA / TERNAK DOMBA ➔ VERDICT WAJIB 'REJECTED', overall_score = 0, dan sertakan 'SQUAD_CONTAMINATION: Terdeteksi materi Tim Arya / wajah manusia / ternak di frame #X' ke critical_issues!
 
 ATURAN KELULUSAN (PASSING GRADE):
 - STATUS APPROVED: Nilai overall_score >= 75 dan ZERO critical issues (critical_issues kosong).
