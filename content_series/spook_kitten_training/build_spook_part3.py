@@ -63,22 +63,40 @@ def composite_master():
     duration_sec = 58.90
     stretch_factor = 58.90 / 52.633333
     
+    # Milo Dynamic Music Selector & DB SFX Cues
+    sys.path.insert(0, "/home/ubuntu/apps/ugc-lemonaru/src")
+    from doni_music_selector import get_music_and_sfx_from_db, resolve_sfx_filepath
+    music_info = get_music_and_sfx_from_db("spook_part3")
+    bgm_path = music_info["audio_path"]
+    bgm_volume = music_info["volume"]
+    print(f"🎵 Spook Part 3 BGM: {music_info['title']} ({music_info['mood']}) | Vol: {bgm_volume}")
+
+    sfx_taco = resolve_sfx_filepath("01_taco_bell_bong")
+    sfx_violin = resolve_sfx_filepath("04_violin_screech")
+    sfx_correct = resolve_sfx_filepath("05_correct_ding")
+
     filter_complex = f"""
 [0:v]setpts={stretch_factor:.6f}*PTS,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[vbg];
 [vbg][1:v]overlay=0:0:format=yuv420[vmaster];
 
 [0:a]asetpts={stretch_factor:.6f}*PTS,atempo={1.0/stretch_factor:.6f},volume=0.35[ameong];
 [2:a]volume=1.0[avoice];
-[3:a]atrim=start=0:end={duration_sec},afade=t=out:st={duration_sec-3.0}:d=3.0,volume=0.18[abgm];
+[3:a]atrim=start=0:end={duration_sec},afade=t=out:st={duration_sec-3.0}:d=3.0,volume={bgm_volume}[abgm];
+[4:a]volume=0.35,adelay=100|100[sfx_hook];
+[5:a]volume=0.30,adelay=14000|14000[sfx_extinction];
+[6:a]volume=0.40,adelay=48000|48000[sfx_reward];
 
-[ameong][avoice][abgm]amix=inputs=3:duration=first:normalize=0,loudnorm=I=-14.5:TP=-1.5:LRA=11[amaster]
+[ameong][avoice][abgm][sfx_hook][sfx_extinction][sfx_reward]amix=inputs=6:duration=first:normalize=0,loudnorm=I=-14.5:TP=-1.5:LRA=11[amaster]
 """
     cmd = [
         "ffmpeg", "-y",
         "-i", str(RAW_VIDEO),
         "-i", str(OVERLAY_MOV),
         "-i", str(AUDIO_PATH),
-        "-i", str(BGM_PATH),
+        "-i", str(bgm_path),
+        "-i", str(sfx_taco),
+        "-i", str(sfx_violin),
+        "-i", str(sfx_correct),
         "-filter_complex", filter_complex,
         "-map", "[vmaster]",
         "-map", "[amaster]",

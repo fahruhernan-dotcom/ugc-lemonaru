@@ -111,51 +111,75 @@ class DoniRemotionFlowPipeline:
             output_captions_json=str(captions_path)
         )
 
-        # Mix with soft playful BGM + Dynamic Sound Effects (SFX)
-        logger.info("🎵 Mixing voiceover with acoustic cat BGM + auto-ducking & dynamic SFX...")
+        # Mix with dynamic mood-based YouTube BGM + Dynamic Sound Effects (SFX) from DB
+        from doni_music_selector import get_music_and_sfx_from_db, resolve_sfx_filepath
+        music_info = get_music_and_sfx_from_db(t_key)
+        bgm_track_path = music_info["audio_path"]
+        bgm_volume = music_info["volume"]
+        db_sfx_cues = music_info["sfx_cues"]
+        logger.info(
+            "🎵 Mixing voiceover with [%s] track '%s' (vol=%.2f) + dynamic SFX from DB...",
+            music_info["mood"], music_info["title"], bgm_volume
+        )
         
-        # Detect exact timing for SFX from captions
+        # Detect exact timing for SFX from captions & DB cues
         sfx_inputs = []
         sfx_filters = []
         next_input_idx = 2
+        mix_sources = ["[voice]", "[bgm]"]
         
-        # 1. Opening Hook impact SFX (Taco Bell Bong at 0.1s)
-        taco_bell_path = ASSETS_DIR / "audio/sfx/sfx_taco_bell_bong.mp3"
-        if taco_bell_path.exists():
-            sfx_inputs.extend(["-i", str(taco_bell_path)])
-            sfx_filters.append(f"[{next_input_idx}:a]volume=0.35,adelay=100|100[sfx_hook];")
-            next_input_idx += 1
-
-        # 2. Interactive Double-Tap Pop SFX (Undertale chime / toy squeak right when "pencet" is spoken)
-        double_tap_delay_ms = 4000
+        words_data = []
         try:
             if captions_path.exists():
                 with open(captions_path, "r", encoding="utf-8") as f:
                     words_data = json.load(f)
-                for w in words_data:
-                    clean_w = re.sub(r'[^\w]', '', w.get("text", "")).lower()
-                    if clean_w in ["pencet", "tap", "ketuk"]:
-                        double_tap_delay_ms = int(w.get("startMs", 4000))
-                        break
         except Exception:
             pass
 
-        chime_path = ASSETS_DIR / "audio/sfx/sfx_yellow_undertale_chime.mp3"
-        if chime_path.exists():
-            sfx_inputs.extend(["-i", str(chime_path)])
-            sfx_filters.append(f"[{next_input_idx}:a]volume=0.45,adelay={double_tap_delay_ms}|{double_tap_delay_ms}[sfx_tap];")
+        # Helper to find word startMs
+        def find_word_time(trigger_word: str, default_ms: int = 100) -> int:
+            tw = trigger_word.lower()
+            for w in words_data:
+                clean_w = re.sub(r'[^\w]', '', w.get("text", "")).lower()
+                if tw in clean_w:
+                    return int(w.get("startMs", default_ms))
+            return default_ms
+
+        # Iterate over DB SFX cues
+        for idx, cue in enumerate(db_sfx_cues):
+            s_id = cue.get("sfx_id")
+            s_trig = cue.get("cue_trigger", "hook")
+            s_vol = float(cue.get("volume", 0.35))
+            s_path = resolve_sfx_filepath(s_id)
+            if not s_path:
+                continue
+
+            # Calculate delay
+            if s_trig == "hook":
+                delay_ms = 100
+            elif s_trig in ["pencet", "tap", "ketuk"]:
+                delay_ms = find_word_time(s_trig, default_ms=4000)
+            else:
+                delay_ms = find_word_time(s_trig, default_ms=1000)
+
+            label = f"sfx_{idx}"
+            sfx_inputs.extend(["-i", str(s_path)])
+            sfx_filters.append(f"[{next_input_idx}:a]volume={s_vol},adelay={delay_ms}|{delay_ms}[{label}];")
+            mix_sources.append(f"[{label}]")
             next_input_idx += 1
 
-        total_audio_inputs = next_input_idx
-        mix_sources = ["[voice]", "[bgm]"]
-        if taco_bell_path.exists():
-            mix_sources.append("[sfx_hook]")
-        if chime_path.exists():
-            mix_sources.append("[sfx_tap]")
+        # Fallback if no SFX cues configured in DB
+        if not db_sfx_cues:
+            taco_bell_path = resolve_sfx_filepath("01_taco_bell_bong")
+            if taco_bell_path and taco_bell_path.exists():
+                sfx_inputs.extend(["-i", str(taco_bell_path)])
+                sfx_filters.append(f"[{next_input_idx}:a]volume=0.35,adelay=100|100[sfx_hook];")
+                mix_sources.append("[sfx_hook]")
+                next_input_idx += 1
 
         filter_complex = (
             "[0:a]volume=1.35,highpass=f=80,dynaudnorm[voice];"
-            "[1:a]volume=0.08[bgm];"
+            f"[1:a]volume={bgm_volume}[bgm];"
             + "".join(sfx_filters)
             + "".join(mix_sources)
             + f"amix=inputs={len(mix_sources)}:duration=first:dropout_transition=2[aout]"
@@ -164,7 +188,7 @@ class DoniRemotionFlowPipeline:
         cmd_audio = [
             "ffmpeg", "-y",
             "-i", str(raw_voice),
-            "-stream_loop", "-1", "-i", str(BGM_PATH),
+            "-stream_loop", "-1", "-i", str(bgm_track_path),
             *sfx_inputs,
             "-filter_complex", filter_complex,
             "-map", "[aout]",
@@ -428,11 +452,17 @@ class DoniRemotionFlowPipeline:
         if len(title) > 100:
             title = title[:97] + "..."
 
+        # Fetch Music credit line to ensure 100% YouTube Content ID & Attribution compliance
+        from doni_music_selector import get_music_and_sfx_from_db
+        music_meta = get_music_and_sfx_from_db(t_key)
+        music_credit = music_meta.get("credit_line", "")
+
         description = (
             f"{topic['title']}\n\n"
             f"{topic.get('hook_banner', '')}\n\n"
             f"{topic['full_script']}\n\n"
             f"Subscribe @DoniesDaily untuk fakta anabul seru setiap hari! 🐾✨\n\n"
+            f"{music_credit}\n\n"
             f"#Shorts #KucingLucu #FaktaKucing #DoniesDaily #CatLovers #Anabul"
         )
         tags = ["Shorts", "KucingLucu", "FaktaKucing", "DoniesDaily", "CatLovers", "Anabul"]
