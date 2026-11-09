@@ -290,8 +290,9 @@ class DoniRemotionFlowPipeline:
 
         # 1. Select clean vertical 9:16 clips synchronized with voice script speech beats
         # Voice-Synced Scene Transitions (Hukum Besi #13): Cuts happen on sentence beats + semantic match
-        from doni_qc_gate import audit_footage_assembly
+        from doni_qc_gate import audit_footage_assembly, audit_against_database
         captions_json_path = PUBLIC_DIR / audio_info["captions_file"]
+        series_id = topic.get("series_id")
 
         selected_clips = []
         clip_durations = None
@@ -301,7 +302,8 @@ class DoniRemotionFlowPipeline:
         for qc_attempt in range(1, 4):
             scene_plans = renderer.select_footage_by_speech_beats(
                 captions_path=captions_json_path,
-                topic_key=t_key
+                topic_key=t_key,
+                series_id=series_id
             )
             if scene_plans:
                 selected_clips = [s["clip_path"] for s in scene_plans]
@@ -312,7 +314,8 @@ class DoniRemotionFlowPipeline:
                     target_duration=duration_sec,
                     target_cut_duration=3.6,
                     topic_key=t_key,
-                    full_script=topic.get("full_script") or topic.get("script") or topic.get("title", "")
+                    full_script=topic.get("full_script") or topic.get("script") or topic.get("title", ""),
+                    series_id=series_id
                 )
                 clip_durations = None
 
@@ -334,7 +337,8 @@ class DoniRemotionFlowPipeline:
                 target_duration=duration_sec,
                 target_cut_duration=3.8,
                 topic_key=t_key,
-                full_script=topic.get("full_script") or topic.get("script") or topic.get("title", "")
+                full_script=topic.get("full_script") or topic.get("script") or topic.get("title", ""),
+                series_id=series_id
             )
             clip_durations = None
             slice_dur_param = duration_sec / max(1, len(selected_clips))
@@ -349,6 +353,12 @@ class DoniRemotionFlowPipeline:
                         seen_clips.add(str(c))
                 selected_clips = healed_clips
                 logger.info("🛡️ Auto-healed fallback clips: %d cuts", len(selected_clips))
+
+        # 1.5. Cleo DB Gatekeeper: Cross-reference footage selection against Database SSOT
+        db_qc = audit_against_database(t_key, selected_clips)
+        if not db_qc["passed"]:
+            raise RuntimeError(f"🚨 CLEO DB-QC REJECTION: {db_qc['errors']}")
+        logger.info("🛡️ Cleo DB-QC Gate Approved: Footage 100% matches DB storyline & series scope.")
 
         # 2. Render High-CTR Remotion Still Thumbnail
         remotion_thumb_path = Path(f"/tmp/{t_key}_remotion_thumb.jpg")
@@ -426,6 +436,16 @@ class DoniRemotionFlowPipeline:
             f"#Shorts #KucingLucu #FaktaKucing #DoniesDaily #CatLovers #Anabul"
         )
         tags = ["Shorts", "KucingLucu", "FaktaKucing", "DoniesDaily", "CatLovers", "Anabul"]
+
+        # HARD GATE: Inspect rendered master video against Database & AI Vision BEFORE upload
+        from doni_qc_gate import audit_against_database
+        logger.info("🔍 Running Cleo DB & AI-Vision Final Gatekeeper before upload...")
+        db_qc_final = audit_against_database(t_key, [], video_path=video_path)
+        if not db_qc_final["passed"]:
+            err_msg = "; ".join(db_qc_final.get("errors", []))
+            logger.error(f"🚨 CLEO POST-RENDER QC REJECTION: {err_msg}")
+            raise RuntimeError(f"🚨 CLEO POST-RENDER QC REJECTION: {err_msg}")
+        logger.info("🛡️ Cleo Post-Render QC Approved: Video verified Shorts-compliant and matches DB SSOT.")
 
         logger.info(f"📤 Uploading master video to YouTube as '{privacy_status}'...")
         res = self.publisher.upload_short(
@@ -506,40 +526,55 @@ class DoniRemotionFlowPipeline:
         logger.info("==================================================")
 
         # 1. Fetch Topic
-        topic = self.fetch_next_topic(topic_key)
-        t_key = topic["topic_key"]
-        logger.info(f"🎯 Target Topic: {t_key} -> '{topic['title']}'")
+        import fcntl
+        lock_file = open("/tmp/doni_render.lock", "w")
+        try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            logger.warning("⚠️ Another DoniesDaily render process is currently running! Exiting to avoid 2-vCPU thrashing.")
+            return {"success": False, "error": "render_in_progress"}
 
-        # Fast-Path Optimization: Check if pre-rendered valid master video already exists
-        master_video_path = WORKSPACE / "data" / f"{t_key}_master.mp4"
-        if master_video_path.exists() and master_video_path.stat().st_size > 5_000_000:
-            logger.info("⚡ [FAST-PATH] Found pre-rendered master video (%.2f MB): %s", master_video_path.stat().st_size / (1024 * 1024), master_video_path)
-            video_path = master_video_path
-        else:
-            # 2. Audio & Captions
-            audio_info = self.synthesize_audio_and_captions(topic)
+        try:
+            topic = self.fetch_next_topic(topic_key)
+            t_key = topic["topic_key"]
+            logger.info(f"🎯 Target Topic: {t_key} -> '{topic['title']}'")
 
-            # 3. Video Background (Handled directly by Hybrid Renderer)
-            bg_video = ""
+            # Fast-Path Optimization: Check if pre-rendered valid master video already exists
+            master_video_path = WORKSPACE / "data" / f"{t_key}_master.mp4"
+            if master_video_path.exists() and master_video_path.stat().st_size > 5_000_000:
+                logger.info("⚡ [FAST-PATH] Found pre-rendered master video (%.2f MB): %s", master_video_path.stat().st_size / (1024 * 1024), master_video_path)
+                video_path = master_video_path
+            else:
+                # 2. Audio & Captions
+                audio_info = self.synthesize_audio_and_captions(topic)
 
-            # 4. Render Remotion Short (Hybrid Mode)
-            video_path = self.render_remotion_short(topic, audio_info, bg_video)
+                # 3. Video Background (Handled directly by Hybrid Renderer)
+                bg_video = ""
 
-        # 5. Publish
-        if publish:
-            upload_res = self.publish_and_reconcile(video_path, topic, privacy_status=privacy_status)
-            return {
-                "success": True,
-                "video_path": str(video_path),
-                "upload": upload_res
-            }
-        else:
-            logger.info("Test mode: Publishing skipped.")
-            return {
-                "success": True,
-                "video_path": str(video_path),
-                "mode": "render_only"
-            }
+                # 4. Render Remotion Short (Hybrid Mode)
+                video_path = self.render_remotion_short(topic, audio_info, bg_video)
+
+            # 5. Publish
+            if publish:
+                upload_res = self.publish_and_reconcile(video_path, topic, privacy_status=privacy_status)
+                return {
+                    "success": True,
+                    "video_path": str(video_path),
+                    "upload": upload_res
+                }
+            else:
+                logger.info("Test mode: Publishing skipped.")
+                return {
+                    "success": True,
+                    "video_path": str(video_path),
+                    "mode": "render_only"
+                }
+        finally:
+            try:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+                lock_file.close()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

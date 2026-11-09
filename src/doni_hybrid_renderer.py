@@ -34,14 +34,19 @@ class DoniHybridRenderer:
         self.data_dir = DATA_DIR
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-    def _fetch_db_catalog(self) -> List[Dict[str, Any]]:
-        """Fetch pure cat catalog directly from ai_brain.doniesdaily_clip_catalog."""
+    def _fetch_db_catalog(self, series_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Fetch pure cat catalog directly from ai_brain.doniesdaily_clip_catalog.
+        Strict isolation:
+        - If series_id is provided, returns ONLY clips belonging to that exact series.
+        - If series_id is None, returns ONLY general b-roll clips (series_id IS NULL).
+        """
         catalog = []
         try:
+            where_series = f"series_id = '{series_id}'" if series_id else "series_id IS NULL"
             cmd = [
                 "docker", "exec", "-i", "supabase-db",
                 "psql", "-U", "postgres", "-d", "postgres", "-t", "-A", "-c",
-                "SELECT json_agg(t) FROM (SELECT clip_id AS id, cluster, rel_path, abs_path, duration, tags, description, emotion, action FROM ai_brain.doniesdaily_clip_catalog WHERE is_active = TRUE) t;"
+                f"SELECT json_agg(t) FROM (SELECT clip_id AS id, cluster, rel_path, abs_path, duration, tags, description, emotion, action, series_id FROM ai_brain.doniesdaily_clip_catalog WHERE is_active = TRUE AND {where_series}) t;"
             ]
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             if res.returncode == 0 and res.stdout.strip():
@@ -51,8 +56,8 @@ class DoniHybridRenderer:
         except Exception as e:
             logger.warning(f"Could not load catalog from PostgreSQL: {e}")
 
-        # Fallback to local cat_assets_catalog.json ONLY if DB unavailable (NO rglob allowed!)
-        if not catalog:
+        # Fallback to local cat_assets_catalog.json ONLY if DB unavailable and NOT a series
+        if not catalog and not series_id:
             catalog_file = self.data_dir / "cat_assets_catalog.json"
             if catalog_file.exists():
                 try:
@@ -61,12 +66,13 @@ class DoniHybridRenderer:
                 except Exception as e:
                     logger.warning(f"Failed to load catalog fallback: {e}")
 
-        # STRICT ISOLATION ASSERTION: Filter out any Arya/Reels paths
+        # STRICT ISOLATION ASSERTION: Filter out any Arya/Reels paths & banned human/livestock keywords
+        banned_terms = ["reels-lemonaru", "assets/footage", "langkah_kaki", "domba", "kambing", "ternak", "selfie", "cermin"]
         sanitized = []
         for item in catalog:
-            p_str = item.get("abs_path", "")
-            if "reels-lemonaru" in p_str or "assets/footage" in p_str:
-                logger.error(f"[SECURITY ALERT] Banned Arya footage rejected: {p_str}")
+            p_str = item.get("abs_path", "").lower()
+            if any(b in p_str for b in banned_terms):
+                logger.error(f"[SECURITY ALERT] Banned footage rejected: {p_str}")
                 continue
             sanitized.append(item)
         return sanitized
@@ -77,15 +83,16 @@ class DoniHybridRenderer:
         target_duration: float = 60.0,
         target_cut_duration: float = 3.6,
         topic_key: Optional[str] = None,
-        full_script: Optional[str] = None
+        full_script: Optional[str] = None,
+        series_id: Optional[str] = None
     ) -> List[Path]:
         """Universal Semantic Asset Selector with Strict Zero In-Video Repetition (Hukum Besi #13).
-        Pools all cat clips from PostgreSQL (Fahru authentic clips + Google Flow AI renders).
+        Pools pure cat clips from PostgreSQL (isolated by series_id if serial).
         Enforces dynamic pacing (3.2s - 4.0s per cut), diverse cluster isolation, and zero looping.
         """
         import math
         needed_clips = num_clips if (num_clips is not None and num_clips >= 8) else max(8, math.ceil(target_duration / target_cut_duration))
-        catalog = self._fetch_db_catalog()
+        catalog = self._fetch_db_catalog(series_id=series_id)
 
         # 1. Fetch recent clip usage history from PostgreSQL (cross-video fatigue)
         recent_used_clips = set()
@@ -345,7 +352,8 @@ class DoniHybridRenderer:
     def select_footage_by_speech_beats(
         self,
         captions_path: Path,
-        topic_key: Optional[str] = None
+        topic_key: Optional[str] = None,
+        series_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Script-Synced Semantic Footage Matcher (Hukum Besi #13 & Script Beat Transitions).
         Aligns each visual cut precisely with the speech cadence of the voiceover.
@@ -356,8 +364,8 @@ class DoniHybridRenderer:
             logger.warning("No speech segments found in captions file: %s", captions_path)
             return []
 
-        # Load catalog from PostgreSQL Dual-Brain
-        catalog = self._fetch_db_catalog()
+        # Load catalog from PostgreSQL Dual-Brain (with series_id filtering)
+        catalog = self._fetch_db_catalog(series_id=series_id)
 
         # Fetch recent clip usage history from PostgreSQL
         recent_used_clips = set()

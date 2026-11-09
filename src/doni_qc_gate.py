@@ -177,7 +177,8 @@ def inspect_video(
                 report["metrics"]["pacing_retention_score"] = ai_res.get("pacing_retention_score")
                 report["metrics"]["cleo_summary"] = ai_res.get("summary_verdict")
         except Exception as e:
-            report["warnings"].append(f"AI Vision check warning: {e}")
+            report["passed"] = False
+            report["errors"].append(f"CLEO AI-VISION FATAL ERROR: Gagal mengeksekusi audit vision: {e}")
 
     return report
 
@@ -243,6 +244,127 @@ def audit_footage_assembly(footage_clips: list, slice_dur: Union[float, List[flo
                 report["errors"].append(f"HUKUM BESI #13 VIOLATION: Klip {Path(c).name} ({dur:.2f}s) di segmen #{idx+1} defisit ekstrem dari slice ({target_slice:.2f}s)!")
 
     return report
+
+def audit_against_database(
+    topic_key: str,
+    footage_clips: Union[List[Path], List[str], List[Any]],
+    video_path: Optional[Union[str, Path]] = None
+) -> Dict[str, Any]:
+    """
+    Cleo DB-Aware QC Gatekeeper:
+    Cross-references PostgreSQL ai_brain.doniesdaily_content_ideas and ai_brain.doniesdaily_series.
+    Enforces:
+    1. Exact Storyline & Series Footage Matching (Hukum Serial: Serial topics MUST use clips from their series_id).
+    2. Zero Cross-Contamination (Hukum Besi #18: Zero human feet, hands, faces, or non-cat footage).
+    3. Title & Hook Banner Alignment against DB SSOT.
+    4. Post-Render AI Vision inspection if video_path is provided.
+    """
+    report: Dict[str, Any] = {
+        "passed": True,
+        "topic_key": topic_key,
+        "errors": [],
+        "warnings": [],
+        "metrics": {}
+    }
+
+    # 1. Fetch DB SSOT row
+    safe_topic = topic_key.replace("'", "''")
+    sql = f"""
+    SELECT json_build_object(
+        'topic_key', topic_key,
+        'title', title,
+        'hook_banner', hook_banner,
+        'full_script', full_script,
+        'content_pillar', content_pillar,
+        'series_id', series_id,
+        'series_episode', series_episode
+    )
+    FROM ai_brain.doniesdaily_content_ideas
+    WHERE topic_key = '{safe_topic}';
+    """
+    cmd = ["docker", "exec", "-i", "supabase-db", "psql", "-U", "postgres", "-d", "postgres", "-t", "-A", "-c", sql]
+    db_topic = None
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=6)
+        if res.returncode == 0 and res.stdout.strip() and res.stdout.strip() != "null":
+            db_topic = json.loads(res.stdout.strip())
+    except Exception as e:
+        report["warnings"].append(f"DB lookup warning: {e}")
+
+    if not db_topic:
+        report["passed"] = False
+        report["errors"].append(f"DB-QC FATAL: Topik '{topic_key}' tidak terdaftar di ai_brain.doniesdaily_content_ideas!")
+        return report
+
+    series_id = db_topic.get("series_id")
+    pillar = db_topic.get("content_pillar", "daily_trivia")
+    report["metrics"]["db_series_id"] = series_id
+    report["metrics"]["db_content_pillar"] = pillar
+
+    # 2. Banned Keyword Check in Footage (Anti-Human / Anti-Livestock)
+    banned_keywords = [
+        "kaki_pemilik", "langkah_kaki", "kaki_orang", "human_feet", "feet", "sandal", "sepatu", "perban",
+        "diangkat_tangan", "diangkat_sarung_tangan", "tangan_manusia", "orang", "pemilik", "human",
+        "selfie", "cermin", "domba", "kambing", "ternak", "blurams"
+    ]
+    for c in footage_clips:
+        c_str = Path(c).name.lower()
+        for b in banned_keywords:
+            if b in c_str:
+                report["passed"] = False
+                report["errors"].append(f"HUKUM BESI #18 REJECTION: Klip '{Path(c).name}' terindikasi memuat '{b}'!")
+
+    # 3. Series Exact Footage Matching
+    if series_id:
+        sql_s = f"""
+        SELECT rel_path, abs_path FROM ai_brain.doniesdaily_clip_catalog
+        WHERE series_id = '{series_id}' AND is_active = TRUE;
+        """
+        cmd_s = ["docker", "exec", "-i", "supabase-db", "psql", "-U", "postgres", "-d", "postgres", "-t", "-A", "-c", sql_s]
+        allowed_paths = set()
+        try:
+            res_s = subprocess.run(cmd_s, capture_output=True, text=True, timeout=5)
+            if res_s.returncode == 0 and res_s.stdout.strip():
+                for line in res_s.stdout.strip().split("\n"):
+                    if line.strip():
+                        for part in line.strip().split("|"):
+                            allowed_paths.add(Path(part.strip()).name.lower())
+        except Exception as e:
+            report["warnings"].append(f"Series clips lookup error: {e}")
+
+        for c in footage_clips:
+            c_name = Path(c).name.lower()
+            if allowed_paths and c_name not in allowed_paths and series_id not in c_name:
+                report["passed"] = False
+                report["errors"].append(
+                    f"DB-QC MISMATCH: Topik serial '{series_id}' (ep {db_topic.get('series_episode')}) "
+                    f"menggunakan klip generic b-roll non-serial '{Path(c).name}'! Klip wajib dari serial '{series_id}'."
+                )
+    else:
+        for c in footage_clips:
+            c_name = Path(c).name.lower()
+            if "spook_" in c_name or "serial_" in c_name or "heist" in c_name:
+                report["passed"] = False
+                report["errors"].append(
+                    f"DB-QC MISMATCH: Topik daily trivia menggunakan klip serial '{Path(c).name}'!"
+                )
+
+    # 4. If video_path is provided, run full post-render inspect_video
+    if video_path and Path(video_path).exists():
+        inspect_res = inspect_video(
+            video_path=str(video_path),
+            script_text=db_topic.get("full_script", ""),
+            title=db_topic.get("title", ""),
+            hook_banner=db_topic.get("hook_banner", ""),
+            run_ai_vision=True
+        )
+        if not inspect_res.get("passed", False):
+            report["passed"] = False
+            report["errors"].extend(inspect_res.get("errors", []))
+        report["inspect_report"] = inspect_res
+
+    return report
+
 
 def format_cleo_stamp(report: Dict[str, Any], video_path: str) -> str:
     m = report.get("metrics", {})
