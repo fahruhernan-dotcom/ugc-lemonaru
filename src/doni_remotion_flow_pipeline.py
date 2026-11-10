@@ -838,8 +838,14 @@ class DoniRemotionFlowPipeline:
                         ]
                         subprocess.run(cmd_swarm, timeout=300)
                         logger.info(f"✅ Swarm engagement cycle completed for {vid_id}!")
+
+                        # Immediately trigger Studio Replier to heart & reply to early comments
+                        replier_script = Path("/home/ubuntu/tools/doni_studio_replier.py")
+                        if replier_script.exists():
+                            logger.info(f"💬 Running immediate YouTube Studio Replier sweep after upload...")
+                            subprocess.run([sys.executable, str(replier_script), "--limit", "10"], timeout=120)
                     except Exception as se:
-                        logger.warning(f"Swarm agent warning: {se}")
+                        logger.warning(f"Swarm/Replier agent warning: {se}")
 
                 return {
                     "success": True,
