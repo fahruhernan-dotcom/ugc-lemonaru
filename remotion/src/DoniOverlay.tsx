@@ -158,8 +158,8 @@ export const DoniOverlay: React.FC<DoniOverlayProps> = ({
           : subtitleStartFrame + maxDurationFrames;
         const durFrames = Math.max(1, subtitleEndFrame - subtitleStartFrame);
 
-        // Don't overlap with outro
-        if (subtitleStartFrame >= outroStartFrame) return null;
+        // Don't overlap with outro (only if outro is active)
+        if (showOutroCTA && subtitleStartFrame >= outroStartFrame) return null;
 
         return (
           <Sequence
