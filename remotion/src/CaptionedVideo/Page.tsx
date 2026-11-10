@@ -19,8 +19,9 @@ const container: React.CSSProperties = {
   top: undefined,
   bottom: YOUTUBE_SHORTS_SAFE_AREA.subtitleSafeBottom,
   height: 180,
-  paddingLeft: YOUTUBE_SHORTS_SAFE_AREA.dangerLeft,
-  paddingRight: YOUTUBE_SHORTS_SAFE_AREA.dangerRight,
+  paddingLeft: 0,
+  paddingRight: 0,
+  width: "100%",
 };
 
 const DESIRED_FONT_SIZE = 110;
