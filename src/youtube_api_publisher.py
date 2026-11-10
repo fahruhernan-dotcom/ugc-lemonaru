@@ -154,6 +154,46 @@ class YouTubeAPIPublisher:
             "privacy_status": privacy_status,
         }
 
+    def find_existing_video_by_tag_or_title(self, tag_anchor: str, title: str) -> Optional[str]:
+        """Checks if a video matching the tag anchor or title was already uploaded recently (anti-duplicate guard)."""
+        self._ensure_valid_token()
+        try:
+            # 1. Search recent uploads in channel using channels().list -> relatedPlaylists -> uploads
+            channels_res = self.youtube.channels().list(part="contentDetails", mine=True).execute()
+            items = channels_res.get("items", [])
+            if not items:
+                return None
+            uploads_playlist_id = items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+
+            # Fetch recent 15 videos from upload playlist (cost = 1 quota unit, highly efficient!)
+            playlist_res = self.youtube.playlistItems().list(
+                part="snippet,contentDetails",
+                playlistId=uploads_playlist_id,
+                maxResults=15
+            ).execute()
+
+            clean_title = title.replace("#Shorts", "").replace("#shorts", "").strip().lower()
+
+            for pl_item in playlist_res.get("items", []):
+                snippet = pl_item.get("snippet", {})
+                item_title = snippet.get("title", "").replace("#Shorts", "").replace("#shorts", "").strip().lower()
+                item_desc = snippet.get("description", "")
+                item_vid_id = snippet.get("resourceId", {}).get("videoId")
+
+                # Match by explicit tag anchor in description/title or matching title
+                if tag_anchor and (tag_anchor in item_desc or tag_anchor in item_title):
+                    logger.info(f"🛡️ Found existing YouTube video via tag anchor '{tag_anchor}': {item_vid_id}")
+                    return item_vid_id
+
+                if clean_title and (clean_title in item_title or item_title in clean_title):
+                    logger.info(f"🛡️ Found existing YouTube video via title match: {item_vid_id}")
+                    return item_vid_id
+
+            return None
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to check existing videos on YouTube channel: {e}")
+            return None
+
     def set_thumbnail(self, video_id: str, thumbnail_path: str) -> Dict[str, Any]:
         """Sets custom thumbnail for uploaded video via official YouTube Data API v3."""
         thumb_file = Path(thumbnail_path).resolve()

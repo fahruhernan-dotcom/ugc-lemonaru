@@ -24,6 +24,10 @@ import sys
 import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from datetime import datetime
+import zoneinfo
+
+JKT_TZ = zoneinfo.ZoneInfo("Asia/Jakarta")
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
@@ -54,11 +58,65 @@ class DoniRemotionFlowPipeline:
         self.flow_operator = FlowCDPOperator()
 
     def fetch_next_topic(self, topic_key: Optional[str] = None) -> Dict[str, Any]:
-        """Pulls next 'ready' topic from Supabase PostgreSQL DB to guarantee zero duplicate content."""
+        """Pulls next topic from PostgreSQL DB with atomic 'producing' state lock to guarantee zero duplicate content."""
         if topic_key:
-            sql = f"SELECT json_agg(t) FROM (SELECT topic_key, title, hook_banner, hook_subtitle, hook_vocal, full_script, flow_prompts, scene_breakdown, status FROM ai_brain.doniesdaily_content_ideas WHERE topic_key = '{topic_key}') t;"
+            sql = f"""
+            UPDATE ai_brain.doniesdaily_content_ideas
+            SET status = 'producing',
+                producing_started_at = NOW(),
+                attempt_count = COALESCE(attempt_count, 0) + 1,
+                updated_at = NOW()
+            WHERE topic_key = '{topic_key}'
+            RETURNING json_build_object(
+                'topic_key', topic_key,
+                'title', title,
+                'hook_banner', hook_banner,
+                'hook_subtitle', hook_subtitle,
+                'hook_vocal', hook_vocal,
+                'full_script', full_script,
+                'flow_prompts', flow_prompts,
+                'scene_breakdown', scene_breakdown,
+                'status', status,
+                'series_id', series_id,
+                'series_episode', series_episode,
+                'content_pillar', content_pillar,
+                'slot_target', slot_target,
+                'target_mood', target_mood,
+                'target_music_track', target_music_track
+            )::text;
+            """
         else:
-            sql = "SELECT json_agg(t) FROM (SELECT topic_key, title, hook_banner, hook_subtitle, hook_vocal, full_script, flow_prompts, scene_breakdown, status FROM ai_brain.doniesdaily_content_ideas WHERE status = 'ready' ORDER BY created_at ASC LIMIT 1) t;"
+            sql = """
+            UPDATE ai_brain.doniesdaily_content_ideas
+            SET status = 'producing',
+                producing_started_at = NOW(),
+                attempt_count = COALESCE(attempt_count, 0) + 1,
+                updated_at = NOW()
+            WHERE topic_key = (
+                SELECT topic_key FROM ai_brain.doniesdaily_content_ideas
+                WHERE status = 'ready'
+                ORDER BY created_at ASC
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            )
+            RETURNING json_build_object(
+                'topic_key', topic_key,
+                'title', title,
+                'hook_banner', hook_banner,
+                'hook_subtitle', hook_subtitle,
+                'hook_vocal', hook_vocal,
+                'full_script', full_script,
+                'flow_prompts', flow_prompts,
+                'scene_breakdown', scene_breakdown,
+                'status', status,
+                'series_id', series_id,
+                'series_episode', series_episode,
+                'content_pillar', content_pillar,
+                'slot_target', slot_target,
+                'target_mood', target_mood,
+                'target_music_track', target_music_track
+            )::text;
+            """
 
         res = subprocess.run([
             "docker", "exec", "-i", "supabase-db",
@@ -67,10 +125,22 @@ class DoniRemotionFlowPipeline:
 
         raw = res.stdout.strip()
         if not raw or raw == "null":
-            raise RuntimeError("No topics with status 'ready' found in ai_brain.doniesdaily_content_ideas!")
+            # If explicit topic_key was requested and already 'producing' or other state, fetch readonly
+            if topic_key:
+                sql_read = f"SELECT json_agg(t) FROM (SELECT topic_key, title, hook_banner, hook_subtitle, hook_vocal, full_script, flow_prompts, scene_breakdown, status, series_id, series_episode, content_pillar, slot_target, target_mood, target_music_track FROM ai_brain.doniesdaily_content_ideas WHERE topic_key = '{topic_key}') t;"
+                res_read = subprocess.run(["docker", "exec", "-i", "supabase-db", "psql", "-U", "postgres", "-d", "postgres", "-t", "-A", "-c", sql_read], capture_output=True, text=True)
+                raw_read = res_read.stdout.strip()
+                if raw_read and raw_read != "null":
+                    json_r = [l.strip() for l in raw_read.splitlines() if l.strip().startswith("[") or l.strip().startswith("{")]
+                    if json_r:
+                        parsed = json.loads(json_r[0])
+                        return parsed[0] if isinstance(parsed, list) else parsed
+            raise RuntimeError("No topics available for production in ai_brain.doniesdaily_content_ideas!")
 
-        ideas = json.loads(raw)
-        return ideas[0]
+        json_lines = [l.strip() for l in raw.splitlines() if l.strip().startswith("{")]
+        if not json_lines:
+            raise RuntimeError(f"Failed to parse JSON topic data from SQL output: {raw}")
+        return json.loads(json_lines[0])
 
     def synthesize_audio_and_captions(self, topic: Dict[str, Any]) -> Dict[str, Any]:
         """Synthesizes ElevenLabs Vivan narration and exports Remotion caption tokens."""
@@ -240,14 +310,49 @@ class DoniRemotionFlowPipeline:
             except Exception as e:
                 logger.warning(f"⚠️ Google Flow generation encountered issue ({e}), falling back to curated assets...")
 
-        # Fallback to local verified clips if flow clips were not obtained
+        # 1. First, check pre-harvested AI clips from Felix for this topic (Disk & DB)
+        flow_base = ASSETS_DIR / "cat_videos" / "flow_renders"
+        if flow_base.exists():
+            pre_harvested = [p for p in flow_base.rglob("*.mp4") if (t_key in p.name or t_key in str(p.parent)) and p.stat().st_size > 500000]
+            # Also check DB harvested_clips
+            try:
+                db_clips_sql = f"SELECT harvested_clips::text FROM ai_brain.doniesdaily_content_ideas WHERE topic_key = '{t_key}' LIMIT 1;"
+                res = subprocess.run(
+                    ["docker", "exec", "-i", "supabase-db", "psql", "-U", "postgres", "-d", "postgres", "-t", "-A", "-c", db_clips_sql],
+                    capture_output=True, text=True, check=True
+                )
+                db_val = res.stdout.strip()
+                if db_val:
+                    clip_list = json.loads(db_val)
+                    for c_rel in clip_list:
+                        c_p = ASSETS_DIR / "cat_videos" / c_rel
+                        if c_p.exists() and c_p not in pre_harvested:
+                            pre_harvested.append(c_p)
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to query DB harvested_clips: {e}")
+
+            if pre_harvested:
+                logger.info(f"✨ Found {len(pre_harvested)} pre-harvested AI scenes from Felix for topic '{t_key}'!")
+                downloaded_clips.extend(pre_harvested)
+
+        # 2. Interleave with authentic clips from fahru_clips (Hukum Besi #13 Interleaving Authentic & AI)
+        fahru_dir = ASSETS_DIR / "cat_videos" / "fahru_clips"
+        banned_arya = {"domba", "kambing", "ternak", "seminar", "selfie", "karaoke", "cermin", "tutorial", "cctv", "blurams"}
+        if fahru_dir.exists():
+            f_clips = [p for p in sorted(list(fahru_dir.glob("*.mp4"))) if not any(b in p.stem.lower() for b in banned_arya)]
+            if f_clips:
+                # Interleave: 1 AI clip from Felix, 1 Real clip from Fahru
+                import random
+                sample_fahru = random.sample(f_clips, min(3, len(f_clips)))
+                downloaded_clips = downloaded_clips[:2] + sample_fahru
+
+        # 3. Fallback to any verified clips in fahru_clips or flow_renders if still empty
         if not downloaded_clips:
-            logger.info("Using curated cat action footage pool...")
-            stock_names = ["clip8_stock.mp4", "clip6_stock.mp4", "clip1_fight.mp4", "clip2_ball.mp4", "clip14_yawning.mp4"]
-            for name in stock_names:
-                p = CAT_VIDEOS_DIR / name
-                if p.exists():
-                    downloaded_clips.append(p)
+            logger.info("Using available cat action pool from fahru_clips and flow_renders...")
+            if fahru_dir.exists():
+                downloaded_clips = [p for p in sorted(list(fahru_dir.glob("*.mp4"))) if not any(b in p.stem.lower() for b in banned_arya)][:4]
+            if not downloaded_clips and flow_base.exists():
+                downloaded_clips = sorted(list(flow_base.rglob("*.mp4")))[:4]
 
         num_scenes = max(1, len(downloaded_clips))
         slice_dur = target_duration / float(num_scenes)
@@ -307,9 +412,9 @@ class DoniRemotionFlowPipeline:
         output_file = WORKSPACE / "data" / f"{t_key}_master.mp4"
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        badge_text = re.sub(r'[^\w\s!]', '', topic.get("hook_banner") or "FAKTA ANABUL").strip()[:18]
-        clean_title = re.sub(r'[^\w\s?]', '', re.sub(r'#\w+', '', topic['title'])).strip().upper()[:42]
-        hook_sub = re.sub(r'[^\w\s!]', '', topic.get("hook_subtitle") or "Bukan Karena Marah Lho!").strip()[:35]
+        badge_text = re.sub(r'[^\w\s!\-]', '', topic.get("hook_banner") or "FAKTA ANABUL").strip()[:24]
+        clean_title = re.sub(r'[^\w\s?]', '', re.sub(r'#\w+', '', topic['title'])).strip().upper()[:50]
+        hook_sub = re.sub(r'[^\w\s!\-]', '', topic.get("hook_subtitle") or "Bukan Karena Marah Lho!").strip()[:60]
         duration_sec = float(audio_info["duration"])
 
         # 1. Select clean vertical 9:16 clips synchronized with voice script speech beats
@@ -317,42 +422,124 @@ class DoniRemotionFlowPipeline:
         from doni_qc_gate import audit_footage_assembly, audit_against_database
         captions_json_path = PUBLIC_DIR / audio_info["captions_file"]
         series_id = topic.get("series_id")
+        series_ep = topic.get("series_episode")
 
         selected_clips = []
         clip_durations = None
         qc_passed = False
 
-        # Self-healing loop: try speech beats up to 3 times, fallback to safe vertical footage if needed
-        for qc_attempt in range(1, 4):
-            scene_plans = renderer.select_footage_by_speech_beats(
-                captions_path=captions_json_path,
-                topic_key=t_key,
-                series_id=series_id
-            )
-            if scene_plans:
-                selected_clips = [s["clip_path"] for s in scene_plans]
-                clip_durations = [s["duration"] for s in scene_plans]
-                logger.info("🎙️ Milo Script-Synced Director: %d speech beat transitions generated", len(selected_clips))
-            else:
-                selected_clips = renderer.select_vertical_footage(
-                    target_duration=duration_sec,
-                    target_cut_duration=3.6,
+        # SERIAL FOOTAGE ASSEMBLY: Strictly isolate serial episodes to their series catalog
+        if series_id:
+            logger.info("🎬 [SERIAL ASSEMBLY] Processing series '%s' (Episode %s)...", series_id, series_ep)
+            cat_series = renderer._fetch_db_catalog(series_id=series_id)
+            if not cat_series:
+                raise RuntimeError(f"No catalog footage found in ai_brain.doniesdaily_clip_catalog for series '{series_id}'!")
+
+            ep_clip = None
+            if series_ep is not None:
+                ep_str = str(series_ep).lower()
+                for c in cat_series:
+                    c_id_l = c.get("id", "").lower()
+                    c_path_l = c.get("abs_path", "").lower()
+                    if any(tag in c_id_l or tag in c_path_l for tag in [f"part{ep_str}", f"day{ep_str}", f"ep{ep_str}"]):
+                        ep_clip = c
+                        break
+
+            # If this series has a single long video for the episode (like Spook Training), build non-overlapping narrative slices
+            if ep_clip or len(cat_series) < 6:
+                target_clip = ep_clip or cat_series[0]
+                raw_path = Path(target_clip["abs_path"])
+                if not raw_path.exists():
+                    raise FileNotFoundError(f"Series raw footage not found at: {raw_path}")
+
+                probe_s = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(raw_path)],
+                    capture_output=True, text=True, check=True
+                )
+                raw_dur = float(probe_s.stdout.strip())
+                logger.info("📹 Primary series footage: %s (raw=%.2fs | audio=%.2fs)", raw_path.name, raw_dur, duration_sec)
+
+                if raw_dur > (duration_sec + 6.0):
+                    slices_dir = WORKSPACE / "content_series" / series_id / "slices"
+                    slices_dir.mkdir(parents=True, exist_ok=True)
+
+                    s1_dur = round(duration_sec * 0.24, 2)
+                    s2_dur = round(duration_sec * 0.34, 2)
+                    s3_dur = round(duration_sec * 0.21, 2)
+                    s4_dur = round(duration_sec - (s1_dur + s2_dur + s3_dur), 2)
+
+                    s4_start = max(0.0, raw_dur - s4_dur)
+                    s3_start = max(0.0, s4_start - s3_dur - 1.0)
+                    mid_space = max(0.0, s3_start - s1_dur)
+                    s2_start = round(s1_dur + max(0.0, (mid_space - s2_dur) / 2.0), 2)
+
+                    slice_configs = [
+                        (0.0, s1_dur),
+                        (s2_start, s2_dur),
+                        (s3_start, s3_dur),
+                        (s4_start, s4_dur),
+                    ]
+                    cut_paths = []
+                    dur_targets = []
+                    for idx, (st_t, dur_t) in enumerate(slice_configs, 1):
+                        slice_file = slices_dir / f"{series_id}_{t_key}_slice_{idx}.mp4"
+                        cmd_slice = [
+                            "ffmpeg", "-y",
+                            "-ss", f"{st_t:.2f}",
+                            "-i", str(raw_path),
+                            "-t", f"{dur_t:.2f}",
+                            "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+                            "-an",
+                            str(slice_file)
+                        ]
+                        subprocess.run(cmd_slice, check=True, capture_output=True)
+                        cut_paths.append(slice_file)
+                        dur_targets.append(dur_t)
+
+                    selected_clips = cut_paths
+                    clip_durations = dur_targets
+                    logger.info("✂️ Created 4 non-overlapping chronological narrative cuts from %s", raw_path.name)
+                else:
+                    selected_clips = [raw_path]
+                    clip_durations = [duration_sec]
+
+                qc_assembly = audit_footage_assembly(selected_clips, clip_durations)
+                if not qc_assembly["passed"]:
+                    raise RuntimeError(f"Serial footage assembly QC failed: {qc_assembly['errors']}")
+                qc_passed = True
+
+        # Self-healing loop for daily/multi-clip topics (or multi-clip serials)
+        if not qc_passed:
+            for qc_attempt in range(1, 4):
+                scene_plans = renderer.select_footage_by_speech_beats(
+                    captions_path=captions_json_path,
                     topic_key=t_key,
-                    full_script=topic.get("full_script") or topic.get("script") or topic.get("title", ""),
                     series_id=series_id
                 )
-                clip_durations = None
+                if scene_plans:
+                    selected_clips = [s["clip_path"] for s in scene_plans]
+                    clip_durations = [s["duration"] for s in scene_plans]
+                    logger.info("🎙️ Milo Script-Synced Director: %d speech beat transitions generated", len(selected_clips))
+                else:
+                    selected_clips = renderer.select_vertical_footage(
+                        target_duration=duration_sec,
+                        target_cut_duration=3.6,
+                        topic_key=t_key,
+                        full_script=topic.get("full_script") or topic.get("script") or topic.get("title", ""),
+                        series_id=series_id
+                    )
+                    clip_durations = None
 
-            slice_dur_param = clip_durations if clip_durations else (duration_sec / max(1, len(selected_clips)))
-            qc_assembly = audit_footage_assembly(selected_clips, slice_dur_param)
+                slice_dur_param = clip_durations if clip_durations else (duration_sec / max(1, len(selected_clips)))
+                qc_assembly = audit_footage_assembly(selected_clips, slice_dur_param)
 
-            if qc_assembly["passed"]:
-                qc_passed = True
-                logger.info("🛡️ Cleo QC Footage Assembly Approved on attempt %d: %d unique cuts", qc_attempt, len(selected_clips))
-                break
-            else:
-                logger.warning("🚨 Cleo QC Footage Rejection on attempt %d: %s. Retrying assembly...", qc_attempt, qc_assembly["errors"])
-                time.sleep(1)
+                if qc_assembly["passed"]:
+                    qc_passed = True
+                    logger.info("🛡️ Cleo QC Footage Assembly Approved on attempt %d: %d unique cuts", qc_attempt, len(selected_clips))
+                    break
+                else:
+                    logger.warning("🚨 Cleo QC Footage Rejection on attempt %d: %s. Retrying assembly...", qc_attempt, qc_assembly["errors"])
+                    time.sleep(1)
 
         # Fallback to ultra-safe vertical footage if speech beats still somehow failed QC
         if not qc_passed:
@@ -465,7 +652,7 @@ class DoniRemotionFlowPipeline:
             f"{music_credit}\n\n"
             f"#Shorts #KucingLucu #FaktaKucing #DoniesDaily #CatLovers #Anabul"
         )
-        tags = ["Shorts", "KucingLucu", "FaktaKucing", "DoniesDaily", "CatLovers", "Anabul"]
+        tags = ["Shorts", "KucingLucu", "FaktaKucing", "DoniesDaily", "CatLovers", "Anabul", f"donies_key:{t_key}"]
 
         # HARD GATE: Inspect rendered master video against Database & AI Vision BEFORE upload
         from doni_qc_gate import audit_against_database
@@ -477,18 +664,54 @@ class DoniRemotionFlowPipeline:
             raise RuntimeError(f"🚨 CLEO POST-RENDER QC REJECTION: {err_msg}")
         logger.info("🛡️ Cleo Post-Render QC Approved: Video verified Shorts-compliant and matches DB SSOT.")
 
-        logger.info(f"📤 Uploading master video to YouTube as '{privacy_status}'...")
-        res = self.publisher.upload_short(
-            video_path=str(video_path),
-            title=title,
-            description=description,
-            tags=tags,
-            privacy_status=privacy_status
-        )
+        # WAL Path
+        wal_file = WORKSPACE / "data" / "production_wal.jsonl"
+        wal_file.parent.mkdir(parents=True, exist_ok=True)
+
+        def write_wal_entry(stage: str, extra: Optional[Dict[str, Any]] = None):
+            entry = {
+                "ts": datetime.now(JKT_TZ).isoformat(),
+                "topic_key": t_key,
+                "title": title,
+                "video_path": str(video_path),
+                "stage": stage
+            }
+            if extra:
+                entry.update(extra)
+            try:
+                with open(wal_file, "a") as f:
+                    f.write(json.dumps(entry) + "\n")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to write WAL log: {e}")
+
+        # IDEMPOTENCY GUARD: Check if already uploaded to YouTube channel before calling insert
+        tag_anchor = f"donies_key:{t_key}"
+        existing_vid_id = self.publisher.find_existing_video_by_tag_or_title(tag_anchor, title)
+        if existing_vid_id:
+            logger.info(f"🛡️ [ANTI-DUPLICATE GUARD] Found video already live on YouTube: {existing_vid_id}! Skipping upload to save 1,600 quota units.")
+            res = {
+                "success": True,
+                "video_id": existing_vid_id,
+                "short_url": f"https://www.youtube.com/shorts/{existing_vid_id}",
+                "watch_url": f"https://youtu.be/{existing_vid_id}",
+                "title": title,
+                "reused": True
+            }
+        else:
+            write_wal_entry("PRE_UPLOAD_INTENT", {"tag_anchor": tag_anchor})
+            logger.info(f"📤 Uploading master video to YouTube as '{privacy_status}'...")
+            res = self.publisher.upload_short(
+                video_path=str(video_path),
+                title=title,
+                description=description,
+                tags=tags,
+                privacy_status=privacy_status
+            )
 
         if res.get("success"):
             vid_id = res.get("video_id")
             logger.info(f"✅ Video live at: https://www.youtube.com/shorts/{vid_id}")
+            write_wal_entry("UPLOAD_SUCCESS", {"video_id": vid_id, "short_url": f"https://www.youtube.com/shorts/{vid_id}"})
 
             # Upload Custom Thumbnail if provided
             thumb_path = topic.get("thumbnail_path") or str(video_path).replace(".mp4", "_thumb.jpg")
@@ -511,12 +734,24 @@ class DoniRemotionFlowPipeline:
             v_post_dur = round(float(probe_post.stdout.strip()), 1) if probe_post.returncode == 0 else 20.0
 
             sql_post = f"""
-            INSERT INTO ai_brain.doniesdaily_posts (video_id, title, banner_title, duration_sec, short_url, privacy_status)
-            VALUES ('{vid_id}', '{title.replace("'", "''")}', '{topic.get("hook_banner", "").replace("'", "''")}', {v_post_dur}, 'https://www.youtube.com/shorts/{vid_id}', '{privacy_status}')
-            ON CONFLICT (video_id) DO NOTHING;
+            INSERT INTO ai_brain.doniesdaily_posts (video_id, topic_key, title, banner_title, duration_sec, short_url, privacy_status)
+            VALUES ('{vid_id}', '{t_key}', '{title.replace("'", "''")}', '{topic.get("hook_banner", "").replace("'", "''")}', {v_post_dur}, 'https://www.youtube.com/shorts/{vid_id}', '{privacy_status}')
+            ON CONFLICT (video_id) DO UPDATE
+            SET topic_key = EXCLUDED.topic_key,
+                short_url = EXCLUDED.short_url;
+
+            UPDATE ai_brain.doniesdaily_content_ideas
+            SET status = 'published',
+                published_video_id = '{vid_id}',
+                published_short_url = 'https://www.youtube.com/shorts/{vid_id}',
+                updated_at = NOW()
+            WHERE topic_key = '{t_key}';
             """
-            subprocess.run(["docker", "exec", "-i", "supabase-db", "psql", "-U", "postgres", "-d", "postgres", "-c", sql_post], capture_output=True)
-            logger.info("✅ Database ledger synchronized with published state!")
+            res_post_sql = subprocess.run(["docker", "exec", "-i", "supabase-db", "psql", "-U", "postgres", "-d", "postgres", "-c", sql_post], capture_output=True, text=True)
+            if res_post_sql.returncode != 0:
+                logger.error("❌ Failed to update DB ledger: %s", res_post_sql.stderr)
+            else:
+                logger.info("✅ Database ledger synchronized with published state (topic_key & content_ideas updated)!")
 
             # Auto-purge heavy ProRes 4444 overlay from /tmp now that publish succeeded
             overlay_mov = Path(f"/tmp/{t_key}_remotion_overlay.mov")
@@ -527,20 +762,6 @@ class DoniRemotionFlowPipeline:
                     logger.info("🧹 Auto-purged ephemeral Remotion overlay (%.2f MB) from /tmp: %s", mov_size_mb, overlay_mov)
                 except Exception as e:
                     logger.warning("Failed to purge ephemeral overlay: %s", e)
-
-            # Trigger Autonomous Multi-Viewer Swarm Agent (Chrome CDP :9222)
-            try:
-                logger.info(f"🐝 Launching autonomous Multi-Viewer Swarm Agent for {vid_id}...")
-                swarm_script = Path("/home/ubuntu/tools/doni_swarm_agent.py")
-                cmd_swarm = [
-                    sys.executable,
-                    str(swarm_script),
-                    vid_id
-                ]
-                subprocess.run(cmd_swarm, timeout=300)
-                logger.info(f"✅ Swarm engagement cycle completed for {vid_id}!")
-            except Exception as se:
-                logger.warning(f"Swarm agent warning: {se}")
 
         return res
 
@@ -569,11 +790,19 @@ class DoniRemotionFlowPipeline:
             t_key = topic["topic_key"]
             logger.info(f"🎯 Target Topic: {t_key} -> '{topic['title']}'")
 
-            # Fast-Path Optimization: Check if pre-rendered valid master video already exists
+            # Fast-Path Optimization: Check if pre-rendered valid master video already exists AND passes Cleo QC
             master_video_path = WORKSPACE / "data" / f"{t_key}_master.mp4"
             if master_video_path.exists() and master_video_path.stat().st_size > 5_000_000:
-                logger.info("⚡ [FAST-PATH] Found pre-rendered master video (%.2f MB): %s", master_video_path.stat().st_size / (1024 * 1024), master_video_path)
-                video_path = master_video_path
+                from doni_qc_gate import audit_against_database
+                fast_qc = audit_against_database(t_key, [], video_path=master_video_path)
+                if fast_qc.get("passed", False):
+                    logger.info("⚡ [FAST-PATH] Found pre-rendered master video (%.2f MB) passing QC: %s", master_video_path.stat().st_size / (1024 * 1024), master_video_path)
+                    video_path = master_video_path
+                else:
+                    logger.warning("⚠️ [FAST-PATH BYPASS] Pre-rendered video %s failed QC: %s. Re-rendering from scratch...", master_video_path, fast_qc.get("errors"))
+                    master_video_path.unlink(missing_ok=True)
+                    audio_info = self.synthesize_audio_and_captions(topic)
+                    video_path = self.render_remotion_short(topic, audio_info, "")
             else:
                 # 2. Audio & Captions
                 audio_info = self.synthesize_audio_and_captions(topic)
@@ -587,6 +816,31 @@ class DoniRemotionFlowPipeline:
             # 5. Publish
             if publish:
                 upload_res = self.publish_and_reconcile(video_path, topic, privacy_status=privacy_status)
+                # Release render flock before launching long-running viewer swarm
+                try:
+                    fcntl.flock(lock_file, fcntl.LOCK_UN)
+                    lock_file.close()
+                except Exception:
+                    pass
+
+                # Trigger Autonomous Multi-Viewer Swarm Agent (Chrome CDP :9222)
+                vid_id = upload_res.get("video_id")
+                if vid_id and not upload_res.get("reused"):
+                    try:
+                        logger.info(f"🐝 Launching autonomous Multi-Viewer Swarm Agent for {vid_id}...")
+                        swarm_script = ROOT_DIR.parent.parent / "tools" / "doni_swarm_agent.py"
+                        if not swarm_script.exists():
+                            swarm_script = Path("/home/ubuntu/tools/doni_swarm_agent.py")
+                        cmd_swarm = [
+                            sys.executable,
+                            str(swarm_script),
+                            vid_id
+                        ]
+                        subprocess.run(cmd_swarm, timeout=300)
+                        logger.info(f"✅ Swarm engagement cycle completed for {vid_id}!")
+                    except Exception as se:
+                        logger.warning(f"Swarm agent warning: {se}")
+
                 return {
                     "success": True,
                     "video_path": str(video_path),

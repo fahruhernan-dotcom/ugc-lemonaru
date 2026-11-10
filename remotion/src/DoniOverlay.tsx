@@ -70,7 +70,7 @@ export const DoniOverlay: React.FC<DoniOverlayProps> = ({
   const { delayRender, continueRender } = useDelayRender();
   const [handle] = useState(() => delayRender());
   const [captions, setCaptions] = useState<Caption[]>([]);
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
   const frame = useCurrentFrame();
 
   useEffect(() => {
@@ -177,7 +177,7 @@ export const DoniOverlay: React.FC<DoniOverlayProps> = ({
 
       {/* 📣 4. OUTRO CTA CARD */}
       {showOutroCTA && (
-        <Sequence from={outroStartFrame} durationInFrames={Math.round(4.5 * fps)}>
+        <Sequence from={outroStartFrame} durationInFrames={Math.max(1, durationInFrames - outroStartFrame)}>
           <OutroCTA
             headline="SUBSCRIBE @DoniesDaily"
             subheadline="Follow Buat Fakta Anabul Tiap Hari! 🐾"

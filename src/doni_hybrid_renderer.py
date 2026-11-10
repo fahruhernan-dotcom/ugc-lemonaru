@@ -135,7 +135,7 @@ class DoniHybridRenderer:
 
         scored_clips = []
         # HUKUM BESI #18: STRICT SQUAD ISOLATION (ZERO ARYA/HUMAN/LIVESTOCK IN DONIES)
-        banned_arya_keywords = {"domba", "kambing", "ternak", "seminar", "selfie", "karaoke", "cermin", "tutorial", "merokok", "pekerja", "sekolah", "pemuda", "screencast"}
+        banned_arya_keywords = {"domba", "kambing", "ternak", "seminar", "selfie", "karaoke", "cermin", "tutorial", "merokok", "pekerja", "sekolah", "pemuda", "screencast", "cctv", "blurams"}
 
         for entry in catalog:
             c_id = entry.get("id", entry.get("stem", ""))
@@ -793,10 +793,26 @@ Kembalikan HANYA JSON array murni tanpa markdown/backticks:
         ]
 
         logger.info("Rendering Remotion transparent overlay: %s", " ".join(cmd))
-        res = subprocess.run(cmd, cwd=str(self.remotion_dir), capture_output=True, text=True, check=False)
-        if res.returncode != 0:
-            logger.error("Remotion overlay render failed: %s", res.stderr or res.stdout)
-            raise RuntimeError(f"Remotion render exit code {res.returncode}")
+        # Stream Remotion render progress to prevent silent appearance of freeze
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(self.remotion_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+        full_output = []
+        if proc.stdout is not None:
+            for line in proc.stdout:
+                full_output.append(line)
+                line_str = line.strip()
+                if any(k in line_str for k in ["Rendered", "Encoded", "Bundling", "Composition", "Error", "error"]):
+                    logger.info(f"   [Remotion] {line_str}")
+        proc.wait()
+        if proc.returncode != 0:
+            err_msg = "".join(full_output)
+            logger.error("Remotion overlay render failed: %s", err_msg)
+            raise RuntimeError(f"Remotion render exit code {proc.returncode}: {err_msg[:500]}")
 
         logger.info("Remotion overlay rendered successfully: %s (%d bytes)", output_mov_path, output_mov_path.stat().st_size)
         return output_mov_path

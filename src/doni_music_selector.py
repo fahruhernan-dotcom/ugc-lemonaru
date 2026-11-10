@@ -82,6 +82,78 @@ TRACK_METADATA = {
         "artist": "Kevin MacLeod",
         "volume": 0.15,
         "mood": "playful_curious"
+    },
+    "Whimsical Cat Sneak.mp3": {
+        "title": "Whimsical Cat Sneak",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.16,
+        "mood": "suspense_training"
+    },
+    "Cartoon Paw Curiosity.mp3": {
+        "title": "Cartoon Paw Curiosity",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.16,
+        "mood": "playful_curious"
+    },
+    "Playful Kitten Bounce.mp3": {
+        "title": "Playful Kitten Bounce",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.16,
+        "mood": "playful_curious"
+    },
+    "Intimate Piano and Cello.mp3": {
+        "title": "Intimate Piano & Cello",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.18,
+        "mood": "emotional"
+    },
+    "Tears of Joy Ballad.mp3": {
+        "title": "Tears of Joy Ballad",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.18,
+        "mood": "emotional"
+    },
+    "Cartoon Paw Curiosity v2.mp3": {
+        "title": "Cartoon Paw Curiosity (Variant)",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.16,
+        "mood": "playful_curious"
+    },
+    "Twinkling Mystery Harp.mp3": {
+        "title": "Twinkling Mystery Harp",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.16,
+        "mood": "curious_mystery"
+    },
+    "Music Box Revelation.mp3": {
+        "title": "Music Box Revelation",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.16,
+        "mood": "curious_mystery"
+    },
+    "Coffee Shop Sunlight.mp3": {
+        "title": "Coffee Shop Sunlight",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.18,
+        "mood": "chill_cozy"
+    },
+    "Sunday Morning Rhodes.mp3": {
+        "title": "Sunday Morning Rhodes",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.18,
+        "mood": "chill_cozy"
+    },
+    "Mischievous Heist Tiptoe.mp3": {
+        "title": "Mischievous Heist Tiptoe",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.16,
+        "mood": "suspense_training"
+    },
+    "Stealthy Detective Sneak.mp3": {
+        "title": "Stealthy Detective Sneak",
+        "artist": "DoniesDaily Original AI",
+        "volume": 0.16,
+        "mood": "suspense_training"
     }
 }
 
@@ -125,13 +197,24 @@ def get_music_and_sfx_from_db(topic_key: str) -> Dict[str, Any]:
     except Exception as e:
         logger.warning(f"⚠️ Failed to query DB for music selector ({topic_key}): {e}")
 
-    # Fallbacks if DB record is empty or missing
-    if not target_music_track or target_music_track not in TRACK_METADATA:
-        if "spook" in topic_key:
-            target_music_track = "Sneaky Snitch.mp3"
+    # Smart Override: Ensure DoniesDaily Original AI tracks take precedence over legacy tracks
+    legacy_tracks = {"Carefree.mp3", "Sneaky Snitch.mp3", "Evening Fall - Piano.mp3", "Touching Story.mp3", "Monkeys Spinning Monkeys.mp3", "Fluffing a Duck.mp3"}
+    ai_mood_defaults = {
+        "suspense_training": "Whimsical Cat Sneak.mp3",
+        "emotional": "Intimate Piano and Cello.mp3",
+        "chill_cozy": "Coffee Shop Sunlight.mp3",
+        "curious_mystery": "Twinkling Mystery Harp.mp3",
+        "playful_curious": "Cartoon Paw Curiosity.mp3"
+    }
+
+    if not target_music_track or target_music_track in legacy_tracks or target_music_track not in TRACK_METADATA:
+        if target_mood in ai_mood_defaults:
+            target_music_track = ai_mood_defaults[target_mood]
+        elif "spook" in topic_key:
+            target_music_track = "Whimsical Cat Sneak.mp3"
             target_mood = "suspense_training"
         else:
-            target_music_track = "Carefree.mp3"
+            target_music_track = "Cartoon Paw Curiosity.mp3"
             target_mood = "playful_curious"
 
     meta = TRACK_METADATA[target_music_track]
@@ -140,11 +223,14 @@ def get_music_and_sfx_from_db(topic_key: str) -> Dict[str, Any]:
         # Fallback to legacy file if pool path missing
         track_path = AUDIO_DIR / "cat_playful_bgm.mp3"
 
-    credit_line = (
-        f"Music: '{meta['title']}' by {meta['artist']} (incompetech.com)\n"
-        f"Licensed under Creative Commons: By Attribution 4.0 License\n"
-        f"http://creativecommons.org/licenses/by/4.0/"
-    )
+    if "DoniesDaily" in meta["artist"]:
+        credit_line = f"Original Soundtrack: '{meta['title']}' by DoniesDaily"
+    else:
+        credit_line = (
+            f"Music: '{meta['title']}' by {meta['artist']} (incompetech.com)\n"
+            f"Licensed under Creative Commons: By Attribution 4.0 License\n"
+            f"http://creativecommons.org/licenses/by/4.0/"
+        )
 
     return {
         "topic_key": topic_key,
