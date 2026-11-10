@@ -36,8 +36,9 @@ export const Page: React.FC<{
   const { width, fps } = useVideoConfig();
   const timeInMs = (frame / fps) * 1000;
 
-  // Enforce YouTube Shorts horizontal safe limit (max 760px) to prevent right-action button collision
-  const maxSafeWidth = Math.min(width * 0.74, YOUTUBE_SHORTS_SAFE_AREA.subtitleMaxWidth);
+  // Enforce YouTube Shorts horizontal safe limit (max 660px with stroke buffer) to guarantee zero UI collision
+  const strokeBuffer = 24; // Accounts for WebkitTextStroke: 20px
+  const maxSafeWidth = Math.max(200, Math.min(width * 0.62, YOUTUBE_SHORTS_SAFE_AREA.subtitleMaxWidth) - strokeBuffer);
 
   const fittedText = fitText({
     fontFamily,

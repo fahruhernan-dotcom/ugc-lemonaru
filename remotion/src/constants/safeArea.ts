@@ -29,7 +29,7 @@ export const YOUTUBE_SHORTS_SAFE_AREA = {
   // Optimal placement for Remotion components
   hookTitleTop: 240, // Drops HookTitle below camera/search header
   subtitleSafeBottom: 500, // Hovers subtitle right above YouTube channel avatar & Subscribe button
-  subtitleMaxWidth: 760, // Centers subtitle with 160px clear margin on right and left
+  subtitleMaxWidth: 660, // Strict dead-center max width (210px / 19.4% clear margin on both left & right, guaranteed clear of 18% YouTube UI buttons)
   watermarkTop: 240, // Aligns channel watermark safely inside top-left zone
   watermarkLeft: 64,
 } as const;

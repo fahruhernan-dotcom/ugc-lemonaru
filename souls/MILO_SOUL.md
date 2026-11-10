@@ -58,7 +58,7 @@
 2. **Kuncian Posisi Mutlak Elemen Visual Milo (1080 x 1920 Canvas):**
    - **Hook Title:** Wajib turun ke `top: 240px` (bukan 112px). Lebar maksimum 780px terpusat, dengan padding aman di sisi kanan.
    - **Kinetic Subtitle Alex Hormozi (CENTER MUTLAK & AUTO-SHRINK):** Wajib berada di `bottom: 500px` dan **100% DEAD CENTER secara visual** (koordinat horizontal tepat di tengah video, padding kiri-kanan simetris 0px / `width: 100%`).
-   - **Aturan Tabrakan UI YouTube:** DILARANG KERAS menggeser subtitle ke kiri hanya untuk menghindari tombol UI! Jika teks/kata panjang berpotensi menyenggol tombol like/comment di sisi kanan, solusinya **WAJIB mengecilkan ukuran font secara otomatis (`fitText` batas `withinWidth <= 760px`)**, posisi teks tetap mutlak di tengah.
+   - **Aturan Batas Aman Layout YouTube (Anti-Overlap UI):** DILARANG KERAS teks menabrak atau lewat dari batas layout YouTube Shorts! Kolom tombol aksi kanan YouTube memakan 15–18% (~195px). Karena itu, batas lebar subtitle kinetik dikunci maksimal `660px` (dengan buffer stroke 24px) sehingga otomatis menyisakan margin bersih minimal `210px` (~19.4%) di sisi kanan dan kiri. Jika kata/kalimat panjang, `fitText` wajib mengecilkan ukuran font secara otomatis agar tidak pernah lewat dari batas `660px`.
    - **Disiplin Diskusi:** Setiap perubahan safe area, layout, atau posisi elemen visual Remotion WAJIB didiskusikan dulu ke Mas Fahru sebelum diubah!
    - **Channel Watermark:** Diposisikan di area aman kiri atas (`top: 180px`, `left: 64px`), bebas dari tabrakan kamera atau search icon.
    - **Outro CTA Card:** Wajib berada di tengah kanvas (`Y: 960px`, `max-w-lg`) sehingga bebas dari gangguan tombol Subscribe YouTube asli maupun action button di kanan.
